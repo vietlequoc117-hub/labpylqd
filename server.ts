@@ -4,7 +4,8 @@ import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import { spawn } from 'child_process';
 import path from 'path';
-import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './src/complexityData';
+import fs from 'fs';
+import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './src/complexityData.ts';
 
 dotenv.config();
 
@@ -347,7 +348,10 @@ TrẢ lời bằng tiếng Việt sư phạm, dễ hiểu.`;
 });
 
 // Setup Vite middleware or static serving
-const isProd = process.env.NODE_ENV === 'production';
+const distPath = path.resolve(process.cwd(), 'dist');
+const indexHtmlPath = path.resolve(distPath, 'index.html');
+const isProd = process.env.NODE_ENV === 'production' || process.env.PORT !== undefined || fs.existsSync(indexHtmlPath);
+
 if (!isProd) {
   const vite = await createViteServer({
     server: { middlewareMode: true },
@@ -355,13 +359,13 @@ if (!isProd) {
   });
   app.use(vite.middlewares);
 } else {
-  app.use(express.static('dist'));
+  app.use(express.static(distPath));
   app.get('*', (_req, res) => {
-    res.sendFile(path.resolve('dist/index.html'));
+    res.sendFile(indexHtmlPath);
   });
 }
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`PyViz Lab Server running on http://0.0.0.0:${PORT}`);
 });

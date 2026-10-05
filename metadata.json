@@ -1,6 +1,6 @@
 {
-  "name": "PyViz Lab - Virtual Python Execution & Memory Visualizer",
-  "description": "Interactive Python execution tracer, call stack & heap memory visualizer, and algorithmic complexity analyzer powered by Google Gemini.",
+  "name": "LAB_PYTHON - Trực Quan Hóa Thuật Toán & Thực Thi Python",
+  "description": "LAB_PYTHON - Nền tảng học lập trình, phân tích lỗi cú pháp, trực quan hóa biểu đồ cột và thực thi bộ nhớ Python dành cho học sinh.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

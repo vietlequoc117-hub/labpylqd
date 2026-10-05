@@ -1,4 +1,4 @@
-import { ComplexityReport } from './types';
+import type { ComplexityReport } from './types.ts';
 
 export const PRESET_COMPLEXITY_MAP: Record<string, ComplexityReport> = {
   'bubble-sort': {
