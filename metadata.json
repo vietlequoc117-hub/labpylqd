@@ -1,0 +1,6 @@
+{
+  "name": "PyViz Lab - Virtual Python Execution & Memory Visualizer",
+  "description": "Interactive Python execution tracer, call stack & heap memory visualizer, and algorithmic complexity analyzer powered by Google Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
