@@ -2,13 +2,9 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import {
   Code2,
-  RotateCcw,
   AlertTriangle,
   Terminal,
-  FilePlus2,
   HelpCircle,
-  ChevronDown,
-  ChevronUp,
   Sparkles,
   Bug,
   CheckCircle2,
@@ -233,12 +229,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Cú pháp đúng
             </span>
           )}
-
-          {hasInputCall && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1 font-mono">
-              <Terminal className="w-3 h-3 text-sky-400" /> Có hàm input()
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -253,46 +243,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               <span>⚡ Sửa lỗi nhanh</span>
             </button>
           )}
-
-          {/* Stdin Drawer Toggle Button */}
-          <button
-            onClick={() => setShowStdin(!showStdin)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${
-              showStdin || stdinInput
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-            }`}
-            title="Nhập dữ liệu stdin cho hàm input()"
-          >
-            <Terminal className="w-3 h-3" />
-            <span>Dữ liệu stdin</span>
-            {stdinInput && (
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-300 ml-0.5"></span>
-            )}
-            {showStdin ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
-          </button>
-
-          {/* New Code Button */}
-          {onNewCode && (
-            <button
-              onClick={onNewCode}
-              title="Mở bài mới để tự nhập code và dữ liệu"
-              className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/30 transition-colors text-[11px] cursor-pointer"
-            >
-              <FilePlus2 className="w-3 h-3" />
-              <span>Bài mới</span>
-            </button>
-          )}
-
-          {/* Reset Button */}
-          <button
-            onClick={onReset}
-            title="Đặt lại code ban đầu"
-            className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors text-[11px] cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Đặt lại</span>
-          </button>
         </div>
       </div>
 

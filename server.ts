@@ -350,7 +350,7 @@ TrẢ lời bằng tiếng Việt sư phạm, dễ hiểu.`;
 // Setup Vite middleware or static serving
 const distPath = path.resolve(process.cwd(), 'dist');
 const indexHtmlPath = path.resolve(distPath, 'index.html');
-const isProd = process.env.NODE_ENV === 'production' || process.env.PORT !== undefined || fs.existsSync(indexHtmlPath);
+const isProd = process.env.NODE_ENV === 'production' && fs.existsSync(indexHtmlPath);
 
 if (!isProd) {
   const vite = await createViteServer({
@@ -361,7 +361,11 @@ if (!isProd) {
 } else {
   app.use(express.static(distPath));
   app.get('*', (_req, res) => {
-    res.sendFile(indexHtmlPath);
+    if (fs.existsSync(indexHtmlPath)) {
+      res.sendFile(indexHtmlPath);
+    } else {
+      res.status(404).send('Not Found');
+    }
   });
 }
 

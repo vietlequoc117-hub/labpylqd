@@ -25,22 +25,49 @@ import { ComplexityDashboard } from './components/ComplexityDashboard';
 import { TerminalOutput } from './components/TerminalOutput';
 import { ComplexityMatrixTable } from './components/ComplexityMatrixTable';
 import { ArrayBarVisualizer } from './components/ArrayBarVisualizer';
+import { AlgorithmQuiz } from './components/AlgorithmQuiz';
 
 import { PRESETS } from './presets';
 import { TraceStep, TraceResult, ComplexityReport } from './types';
 import { executeTrace, getPyodide } from './services/traceService';
 import { lintPythonCode } from './services/pythonLinter';
+import { filterAlgorithmicSteps } from './utils/stepFilter';
 
 export default function App() {
   // Preset & Code state
   const [selectedPresetId, setSelectedPresetId] = useState<string>(PRESETS[0].id);
   const [code, setCode] = useState<string>(PRESETS[0].code);
 
-  // Execution state
+  // Execution state (raw steps & smart algorithmic filtered steps)
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [steps, setSteps] = useState<TraceStep[]>([]);
+  const [rawSteps, setRawSteps] = useState<TraceStep[]>([]);
+  const [stepMode, setStepMode] = useState<'algorithmic' | 'all'>('algorithmic');
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [executionError, setExecutionError] = useState<string | null>(null);
+
+  // Bộ lọc Bước Thuật Toán (Algorithmic Steps: loại bỏ micro-steps rác, giữ đúng nhịp so sánh và hoán đổi)
+  const filterResult = React.useMemo(() => {
+    return filterAlgorithmicSteps(rawSteps, code);
+  }, [rawSteps, code]);
+
+  const steps = React.useMemo(() => {
+    return stepMode === 'algorithmic' ? filterResult.steps : rawSteps;
+  }, [stepMode, filterResult, rawSteps]);
+
+  // Chuyển đổi mượt mà giữa chế độ Thuật toán (~20 bước) và Chi tiết (~60 dòng)
+  const handleToggleStepMode = useCallback(() => {
+    setStepMode((prev) => {
+      const nextMode = prev === 'algorithmic' ? 'all' : 'algorithmic';
+      if (nextMode === 'all') {
+        const rawIdx = filterResult.rawIndexMap[currentStepIndex] ?? 0;
+        setCurrentStepIndex(rawIdx);
+      } else {
+        const filtIdx = filterResult.filteredIndexMap[currentStepIndex] ?? 0;
+        setCurrentStepIndex(filtIdx);
+      }
+      return nextMode;
+    });
+  }, [currentStepIndex, filterResult]);
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -62,7 +89,7 @@ export default function App() {
   const [finalStdout, setFinalStdout] = useState<string>('');
 
   // UI state: defaults to Array Bar Chart matching user request!
-  const [activeTab, setActiveTab] = useState<'barchart' | 'variables' | 'algorithm' | 'complexity'>('barchart');
+  const [activeTab, setActiveTab] = useState<'barchart' | 'variables' | 'algorithm' | 'quiz' | 'complexity'>('barchart');
 
   const currentPreset = PRESETS.find((p) => p.id === selectedPresetId);
 
@@ -108,7 +135,7 @@ export default function App() {
     if (!lintRes.isValid) {
       const firstErr = lintRes.errors[0];
       setExecutionError(firstErr.message + (firstErr.suggestion ? ` (👉 ${firstErr.suggestion})` : ''));
-      setSteps([]);
+      setRawSteps([]);
       setCurrentStepIndex(0);
       setIsRunning(false);
       return;
@@ -120,13 +147,13 @@ export default function App() {
 
       if (result.error && (!result.steps || result.steps.length === 0)) {
         setExecutionError(result.error);
-        setSteps([]);
+        setRawSteps([]);
         setCurrentStepIndex(0);
         setIsRunning(false);
         return;
       }
 
-      setSteps(result.steps || []);
+      setRawSteps(result.steps || []);
       setCurrentStepIndex(0);
       setFinalStdout(result.stdout || '');
 
@@ -171,7 +198,7 @@ export default function App() {
       }
     } catch (err: any) {
       setExecutionError(err.message || 'Lỗi không xác định khi thực thi code.');
-      setSteps([]);
+      setRawSteps([]);
     } finally {
       setIsRunning(false);
     }
@@ -333,6 +360,19 @@ export default function App() {
                 </button>
 
                 <button
+                  onClick={() => setActiveTab('quiz')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    activeTab === 'quiz'
+                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 ring-1 ring-purple-400'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Trắc Nghiệm (tt.pdf)</span>
+                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Ngẫu nhiên)</span>
+                </button>
+
+                <button
                   onClick={() => setActiveTab('complexity')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'complexity'
@@ -362,6 +402,10 @@ export default function App() {
                 speed={speed}
                 onChangeSpeed={setSpeed}
                 currentStep={currentStep}
+                stepMode={stepMode}
+                onToggleStepMode={handleToggleStepMode}
+                rawStepsCount={rawSteps.length}
+                algorithmicStepsCount={filterResult.steps.length}
               />
             </div>
 
@@ -403,6 +447,18 @@ export default function App() {
                   customCode={code}
                   presetPseudocode={selectedPresetId === 'custom-code' ? undefined : currentPreset?.pseudocode}
                   activePythonLine={justExecutedLine || nextExecutingLine}
+                />
+              )}
+
+              {activeTab === 'quiz' && (
+                <AlgorithmQuiz
+                  currentAlgorithmId={selectedPresetId}
+                  onLoadArrayToVisualizer={(arr) => {
+                    const arrayStr = arr.join(' ');
+                    setStdinInput(arrayStr);
+                    setActiveTab('barchart');
+                    handleRunCode(undefined, undefined, arrayStr);
+                  }}
                 />
               )}
 

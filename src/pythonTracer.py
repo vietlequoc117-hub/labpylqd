@@ -151,6 +151,10 @@ class VisualizerTracer:
         if code_filename != self.target_code_file:
             return self.trace_callback
 
+        # Filter out comprehension internal frames
+        if frame.f_code.co_name in ('<listcomp>', '<dictcomp>', '<setcomp>', '<genexpr>'):
+            return None
+
         if event not in ('call', 'line', 'return', 'exception'):
             return self.trace_callback
 

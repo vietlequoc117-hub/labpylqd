@@ -65,18 +65,6 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </select>
           </div>
-
-          <button
-            onClick={() => onSelectPreset('custom-code')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              selectedPresetId === 'custom-code'
-                ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/50 shadow-sm'
-                : 'bg-slate-800 text-slate-300 border border-slate-700 hover:text-white hover:border-slate-600'
-            }`}
-            title="Mở bài mới để tự viết code và nhập dữ liệu bất kỳ"
-          >
-            <span>+ Tự viết code mới</span>
-          </button>
         </div>
 
         {/* Right Actions: Large Run Button */}

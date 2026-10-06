@@ -22,6 +22,10 @@ interface ControlsProps {
   speed: number;
   onChangeSpeed: (speed: number) => void;
   currentStep?: TraceStep;
+  stepMode?: 'algorithmic' | 'all';
+  onToggleStepMode?: () => void;
+  rawStepsCount?: number;
+  algorithmicStepsCount?: number;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
@@ -33,6 +37,10 @@ export const Controls: React.FC<ControlsProps> = ({
   speed,
   onChangeSpeed,
   currentStep,
+  stepMode = 'algorithmic',
+  onToggleStepMode,
+  rawStepsCount,
+  algorithmicStepsCount,
 }) => {
   const isFirst = currentStepIndex <= 0;
   const isLast = currentStepIndex >= totalSteps - 1;
@@ -67,15 +75,46 @@ export const Controls: React.FC<ControlsProps> = ({
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-lg flex flex-col gap-2.5">
-      {/* Top Row: Progress Bar & Current Status */}
+      {/* Top Row: Progress Bar & Current Status & Step Mode Toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-xs text-slate-200">
             Tiến trình chạy từng bước:
           </span>
-          <span className="font-mono text-xs font-bold text-emerald-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+          <span className="font-mono text-xs font-bold text-emerald-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 shadow-inner">
             Bước {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
           </span>
+
+          {/* Nút chuyển đổi chế độ Thuật toán (~20 bước) vs Chi tiết (~60 dòng) */}
+          {onToggleStepMode && rawStepsCount !== undefined && algorithmicStepsCount !== undefined && rawStepsCount > algorithmicStepsCount && (
+            <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] ml-1">
+              <button
+                type="button"
+                onClick={stepMode === 'algorithmic' ? undefined : onToggleStepMode}
+                className={`flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                  stepMode === 'algorithmic'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Chế độ Thuật toán: Chỉ duyệt các bước có ý nghĩa (so sánh, hoán đổi, chốt mốc) - khoảng 15-25 bước"
+              >
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Thuật toán ({algorithmicStepsCount} bước)</span>
+              </button>
+              <button
+                type="button"
+                onClick={stepMode === 'all' ? undefined : onToggleStepMode}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer ${
+                  stepMode === 'all'
+                    ? 'bg-slate-700 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Chế độ Chi tiết: Hiển thị từng dòng lệnh Python riêng lẻ (cờ swapped, loop header)"
+              >
+                <span>Tất cả ({rawStepsCount} dòng)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Action text */}
