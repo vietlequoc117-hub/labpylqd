@@ -204,6 +204,7 @@ print("Mảng sau Quick Sort:", numbers)
     id: 'merge-sort',
     title: '5. Merge Sort (Sắp Xếp Trộn)',
     category: 'Thuật toán Sắp xếp',
+    defaultStdin: '38 27 43 3 9',
     description: 'Chia đôi mảng liên tục cho đến khi mỗi đoạn con chỉ có 1 phần tử, sau đó lần lượt trộn (merge) các cặp mảng con đã có thứ tự lại với nhau.',
     code: `def merge_sort(arr):
     if len(arr) > 1:
@@ -239,7 +240,9 @@ print("Mảng sau Quick Sort:", numbers)
             k += 1
     return arr
 
-numbers = [38, 27, 43, 3, 9]
+# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
+raw = input("Nhập mảng số: ")
+numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
 print("Mảng ban đầu:", numbers)
 merge_sort(numbers)
 print("Mảng sau Merge Sort:", numbers)
@@ -300,9 +303,44 @@ for item in matrix:
   // THUẬT TOÁN TÌM KIẾM (CHUẨN CHƯƠNG TRÌNH TIN HỌC THPT)
   // =========================================================================
   {
-    id: 'binary-search',
-    title: '7. Tìm kiếm nhị phân (Binary Search) - O(log n)',
+    id: 'linear-search',
+    title: '7. Tìm kiếm tuần tự (Linear Search) - O(n)',
     category: 'Thuật toán Tìm kiếm',
+    defaultStdin: '12 45 7 23 56 89 34',
+    description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử cần tìm hoặc duyệt hết mảng. Áp dụng được cho cả mảng chưa sắp xếp với độ phức tạp O(n).',
+    code: `def linear_search(arr, target):
+    # Duyệt tuần tự từng phần tử từ đầu đến cuối mảng
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i  # Tìm thấy tại chỉ số i
+    return -1  # Không tìm thấy sau khi duyệt hết mảng
+
+# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
+raw = input("Nhập mảng số: ")
+numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
+can_tim = 23 if 23 in numbers else (numbers[len(numbers) // 2] if numbers else 0)
+print("Mảng cần tìm:", numbers)
+print("Số cần tìm:", can_tim)
+
+vi_tri = linear_search(numbers, can_tim)
+if vi_tri != -1:
+    print(f"Tìm thấy số {can_tim} tại vị trí index: {vi_tri}")
+else:
+    print(f"Không tìm thấy số {can_tim} trong mảng")
+`,
+    pseudocode: [
+      { lineNum: 1, text: 'Thuật toán LinearSearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Duyệt tuần tự từng phần tử trong mảng A' },
+      { lineNum: 2, text: 'Lặp i từ 0 đến độ dài(A) - 1:', indent: 1, correspondingPythonLines: [3], explanation: 'Kiểm tra lần lượt từng vị trí từ trái sang phải' },
+      { lineNum: 3, text: 'Nếu A[i] = target thì:', indent: 2, correspondingPythonLines: [4], explanation: 'So sánh phần tử tại chỉ số i với giá trị cần tìm' },
+      { lineNum: 4, text: 'Trả về i (Tìm thấy)', indent: 3, correspondingPythonLines: [5], explanation: 'Dừng ngay và trả về vị trí phần tử' },
+      { lineNum: 5, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [6], explanation: 'Duyệt hết mảng mà không thấy target' },
+    ],
+  },
+  {
+    id: 'binary-search',
+    title: '8. Tìm kiếm nhị phân (Binary Search) - O(log n)',
+    category: 'Thuật toán Tìm kiếm',
+    defaultStdin: '2 5 8 12 16 23 38 56 72 91',
     description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị trong thời gian O(log n).',
     code: `def binary_search(arr, target):
     left = 0
@@ -321,13 +359,20 @@ for item in matrix:
             
     return -1  # Không tìm thấy
 
-numbers = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]
-can_tim = 23
+# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
+raw = input("Nhập mảng số: ")
+numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
+# Đảm bảo mảng đã được sắp xếp để áp dụng tìm kiếm nhị phân:
+numbers.sort()
+can_tim = 23 if 23 in numbers else (numbers[len(numbers) // 2] if numbers else 0)
 print("Mảng đã sắp xếp:", numbers)
 print("Số cần tìm:", can_tim)
 
 vi_tri = binary_search(numbers, can_tim)
-print("Tìm thấy tại vị trí index:", vi_tri)
+if vi_tri != -1:
+    print(f"Tìm thấy số {can_tim} tại vị trí index: {vi_tri}")
+else:
+    print(f"Không tìm thấy số {can_tim} trong mảng")
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán BinarySearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Tìm kiếm nhị phân trên mảng A đã có thứ tự' },

@@ -1,4 +1,9 @@
-export type AlgorithmType = 'bubble-sort' | 'selection-sort' | 'insertion-sort';
+export type AlgorithmType =
+  | 'bubble-sort'
+  | 'selection-sort'
+  | 'insertion-sort'
+  | 'quick-sort'
+  | 'merge-sort';
 
 export interface QuizOption {
   key: 'A' | 'B' | 'C' | 'D';
@@ -41,7 +46,6 @@ export function simulateBubbleSortPasses(arr: number[]): number[][] {
     }
     history.push([...a]);
     if (!swapped) {
-      // Nếu không swapped, các lượt tiếp theo mảng giữ nguyên
       while (history.length < n - 1) {
         history.push([...a]);
       }
@@ -96,6 +100,82 @@ export function simulateInsertionSortPasses(arr: number[]): number[][] {
   return history;
 }
 
+// 4. Thuật toán Quick Sort: lưu trạng thái sau mỗi lượt phân hoạch (Lomuto Partition)
+export function simulateQuickSortPasses(arr: number[]): number[][] {
+  const a = [...arr];
+  const history: number[][] = [];
+
+  function partition(low: number, high: number): number {
+    const pivot = a[high];
+    let i = low - 1;
+    for (let j = low; j < high; j++) {
+      if (a[j] <= pivot) {
+        i++;
+        const temp = a[i];
+        a[i] = a[j];
+        a[j] = temp;
+      }
+    }
+    const temp = a[i + 1];
+    a[i + 1] = a[high];
+    a[high] = temp;
+    history.push([...a]);
+    return i + 1;
+  }
+
+  // Duyệt các đoạn phân hoạch theo thứ tự hàng đợi
+  const queue: [number, number][] = [[0, a.length - 1]];
+  while (queue.length > 0) {
+    const item = queue.shift();
+    if (!item) break;
+    const [low, high] = item;
+    if (low < high) {
+      const pi = partition(low, high);
+      queue.push([low, pi - 1]);
+      queue.push([pi + 1, high]);
+    }
+  }
+
+  return history;
+}
+
+// 5. Thuật toán Merge Sort: lưu trạng thái sau mỗi tầng trộn (Bottom-up passes)
+export function simulateMergeSortPasses(arr: number[]): number[][] {
+  let a = [...arr];
+  const n = a.length;
+  const history: number[][] = [];
+
+  for (let width = 1; width < n; width *= 2) {
+    const nextA = [...a];
+    for (let i = 0; i < n; i += 2 * width) {
+      const left = i;
+      const mid = Math.min(i + width, n);
+      const right = Math.min(i + 2 * width, n);
+      let l = left;
+      let r = mid;
+      let k = left;
+
+      while (l < mid && r < right) {
+        if (a[l] <= a[r]) {
+          nextA[k++] = a[l++];
+        } else {
+          nextA[k++] = a[r++];
+        }
+      }
+      while (l < mid) {
+        nextA[k++] = a[l++];
+      }
+      while (r < right) {
+        nextA[k++] = a[r++];
+      }
+    }
+    a = nextA;
+    history.push([...a]);
+  }
+
+  return history;
+}
+
 // Helper: Sinh mảng ngẫu nhiên từ 6 đến 12 số
 export function generateRandomArray(minLen = 6, maxLen = 12): number[] {
   const len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
@@ -140,32 +220,49 @@ export function generateQuizQuestion(
   const originalArray = customArray || generateRandomArray(6, 12);
   const n = originalArray.length;
 
-  // 2. Lần lặp ngẫu nhiên (k từ 1 đến min(n-2, 4))
-  const maxPossiblePass = Math.min(n - 2, 4);
-  const passNumber = customPass || Math.floor(Math.random() * maxPossiblePass) + 1;
-
-  // Lấy lịch sử các lượt của thuật toán chính
+  // Lấy lịch sử các lượt của thuật toán chính và thuật toán đối chứng
   let passes: number[][] = [];
   let otherPasses: number[][] = [];
   let algoNameVN = '';
   let otherAlgoNameVN = '';
+  let questionSubjectText = '';
 
   if (algoType === 'bubble-sort') {
     passes = simulateBubbleSortPasses(originalArray);
     otherPasses = simulateSelectionSortPasses(originalArray);
     algoNameVN = 'sắp xếp nổi bọt (Bubble Sort)';
     otherAlgoNameVN = 'thuật toán sắp xếp chọn';
+    questionSubjectText = 'của vòng lặp ngoài (for i)';
   } else if (algoType === 'selection-sort') {
     passes = simulateSelectionSortPasses(originalArray);
     otherPasses = simulateBubbleSortPasses(originalArray);
     algoNameVN = 'sắp xếp chọn (Selection Sort)';
     otherAlgoNameVN = 'thuật toán sắp xếp nổi bọt';
-  } else {
+    questionSubjectText = 'của vòng lặp ngoài (for i)';
+  } else if (algoType === 'insertion-sort') {
     passes = simulateInsertionSortPasses(originalArray);
     otherPasses = simulateSelectionSortPasses(originalArray);
     algoNameVN = 'sắp xếp chèn (Insertion Sort)';
     otherAlgoNameVN = 'thuật toán sắp xếp chọn';
+    questionSubjectText = 'của vòng lặp ngoài (for i)';
+  } else if (algoType === 'quick-sort') {
+    passes = simulateQuickSortPasses(originalArray);
+    otherPasses = simulateMergeSortPasses(originalArray);
+    algoNameVN = 'sắp xếp nhanh (Quick Sort)';
+    otherAlgoNameVN = 'thuật toán sắp xếp trộn (Merge Sort)';
+    questionSubjectText = 'phân hoạch (partition chọn chốt pivot là phần tử cuối)';
+  } else {
+    // merge-sort
+    passes = simulateMergeSortPasses(originalArray);
+    otherPasses = simulateQuickSortPasses(originalArray);
+    algoNameVN = 'sắp xếp trộn (Merge Sort)';
+    otherAlgoNameVN = 'thuật toán sắp xếp nhanh (Quick Sort)';
+    questionSubjectText = 'trộn (merge)';
   }
+
+  // 2. Lần lặp ngẫu nhiên
+  const maxPossiblePass = Math.max(1, Math.min(passes.length, 4));
+  const passNumber = customPass || Math.floor(Math.random() * maxPossiblePass) + 1;
 
   // Đáp án đúng: lượt thứ passNumber (index passNumber - 1)
   const passIndex = passNumber - 1;
@@ -173,13 +270,15 @@ export function generateQuizQuestion(
 
   // Các phương án gây nhiễu (distractors) chuẩn như file tt.pdf:
   // 1. Distractor 1: Kết quả của thuật toán khác sau lượt k
-  const otherAlgoArray = otherPasses[passIndex] || otherPasses[0];
+  const otherAlgoArray = otherPasses[passIndex] || otherPasses[0] || originalArray;
 
   // 2. Distractor 2: Dãy ban đầu (nếu passNumber = 1) hoặc dãy sau lượt k - 1
   const prevPassArray = passNumber === 1 ? originalArray : passes[passIndex - 1];
 
   // 3. Distractor 3: Dãy sau lượt k + 1 (hoặc k + 2 nếu có)
-  const nextPassArray = passes[passIndex + 1] || (passes.length > passIndex + 2 ? passes[passIndex + 2] : originalArray);
+  const nextPassArray =
+    passes[passIndex + 1] ||
+    (passes.length > passIndex + 2 ? passes[passIndex + 2] : originalArray);
 
   // Fallback distractor nếu có phương án bị trùng
   const candidatePool: { array: number[]; note: string }[] = [
@@ -207,7 +306,7 @@ export function generateQuizQuestion(
     }
   }
 
-  // Nếu bị trùng (ví dụ sau lượt k-1 và k mảng giống nhau), bổ sung các lượt khác
+  // Nếu bị trùng, bổ sung các lượt khác
   let fallbackPass = 1;
   while (uniqueCandidates.length < 4 && fallbackPass <= passes.length) {
     const arrCandidate = passes[fallbackPass - 1];
@@ -233,10 +332,10 @@ export function generateQuizQuestion(
     }
   }
 
-  // Đặt lại đúng 4 phương án
+  // Lấy đúng 4 phương án
   const finalFour = uniqueCandidates.slice(0, 4);
 
-  // Xáo trộn 4 phương án
+  // Xáo trộn 4 phương án A, B, C, D
   const shuffled = shuffle(finalFour);
   const keys: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
 
@@ -260,7 +359,7 @@ export function generateQuizQuestion(
   let level: 'Nhận biết' | 'Thông hiểu' | 'Vận dụng' = 'Thông hiểu';
   if (passNumber === 1 && n <= 8) {
     level = 'Nhận biết';
-  } else if (passNumber >= 3 || n >= 10) {
+  } else if (passNumber >= 3 || n >= 10 || algoType === 'quick-sort' || algoType === 'merge-sort') {
     level = 'Vận dụng';
   }
 
@@ -271,7 +370,6 @@ export function generateQuizQuestion(
   }
 
   // Xây dựng phần Giải thích đúng 100% cấu trúc của tt.pdf:
-  // "Giải thích (Thông hiểu): Chạy thử với a = [...]: sau lượt 1: [...]; sau lượt 2: [...]. Đáp án đúng là [...]. [option A] là... [option B] là..."
   const stepsExplanationText = historyList
     .map((h) => `sau lượt ${h.pass}: [${h.array.join(', ')}]`)
     .join('; ');
@@ -287,9 +385,22 @@ export function generateQuizQuestion(
     ', '
   )}]. ${distractorNotesText}.`;
 
-  const questionText = `Cho a = [${originalArray.join(
-    ', '
-  )}]. Sau lượt lặp thứ ${passNumber} của vòng lặp ngoài (for i), danh sách a là:`;
+  // Câu hỏi theo chuẩn từng thuật toán
+  let questionText = '';
+  if (algoType === 'quick-sort') {
+    questionText = `Cho a = [${originalArray.join(
+      ', '
+    )}]. Sau lượt phân hoạch (partition) thứ ${passNumber} của thuật toán Quick Sort (chọn phần tử cuối làm chốt), danh sách a là:`;
+  } else if (algoType === 'merge-sort') {
+    const subLen = Math.pow(2, passNumber);
+    questionText = `Cho a = [${originalArray.join(
+      ', '
+    )}]. Sau lượt trộn (merge) thứ ${passNumber} của thuật toán Merge Sort (trộn các mảng con kích thước ${subLen}), danh sách a là:`;
+  } else {
+    questionText = `Cho a = [${originalArray.join(
+      ', '
+    )}]. Sau lượt lặp thứ ${passNumber} của vòng lặp ngoài (for i), danh sách a là:`;
+  }
 
   return {
     id: `quiz-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,

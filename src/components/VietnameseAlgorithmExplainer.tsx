@@ -122,6 +122,25 @@ const ALGORITHM_KNOWLEDGE_BASE: Record<
     practicalNote:
       'Merge Sort là ví dụ kinh điển nhất của mô hình thuật toán "Chia để trị" (Divide and Conquer).',
   },
+  'linear-search': {
+    analogy:
+      'Tưởng tượng như bạn đang tìm một quyển sách trên giá sách chưa được xếp thứ tự hoặc tìm chìa khóa trong chùm chìa: Bạn chỉ có thể lần lượt thử từng chiếc chìa từ chiếc đầu tiên cho đến chiếc cuối cùng cho đến khi mở được ổ khóa hoặc thử hết chùm chìa.',
+    steps: [
+      'Bước 1: Bắt đầu duyệt từ phần tử đầu tiên của mảng (chỉ số i = 0).',
+      'Bước 2: So sánh giá trị A[i] với giá trị cần tìm (target).',
+      'Bước 3: Nếu A[i] == target: Tìm thấy! Trả về chỉ số i và dừng thuật toán ngay lập tức.',
+      'Bước 4: Nếu A[i] != target: Tăng chỉ số i lên 1 (i = i + 1) và chuyển sang phần tử tiếp theo.',
+      'Bước 5: Nếu đã duyệt hết mảng mà vẫn không tìm thấy: Trả về -1 (Không tìm thấy).',
+    ],
+    keyRules: [
+      'Ưu điểm lớn nhất: Áp dụng được cho MỌI mảng, kể cả mảng lộn xộn chưa được sắp xếp.',
+      'Độ phức tạp thời gian: O(n) ở trường hợp xấu nhất (Worst-case) và trung bình; O(1) ở trường hợp tốt nhất (Best-case).',
+      'Không gian bộ nhớ: O(1) - chỉ dùng một biến chỉ số i để duyệt.',
+      'Nhược điểm: Chậm khi mảng có kích thước lớn (n hàng triệu phần tử).',
+    ],
+    practicalNote:
+      'Trong đề thi Tin học: Câu hỏi trắc nghiệm hay gặp: "Ưu điểm của thuật toán Tìm kiếm tuần tự so với Tìm kiếm nhị phân là gì?" -> Đáp án: Không yêu cầu mảng phải được sắp xếp trước.',
+  },
   'binary-search': {
     analogy:
       'Tưởng tượng như bạn đang tra từ điển giấy hoặc đoán một số từ 1 đến 100: Bạn mở ngay trang chính giữa sách (hoặc đoán số 50). Nếu từ cần tìm đứng sau từ ở trang giữa, bạn bỏ hẳn nửa cuốn sách bên trái và chỉ tìm ở nửa bên phải. Mỗi lần kiểm tra, bạn đã loại bỏ ngay 50% số lượng phần tử!',

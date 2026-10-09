@@ -36,6 +36,10 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
       ? 'selection-sort'
       : currentAlgorithmId === 'insertion-sort'
       ? 'insertion-sort'
+      : currentAlgorithmId === 'quick-sort'
+      ? 'quick-sort'
+      : currentAlgorithmId === 'merge-sort'
+      ? 'merge-sort'
       : 'bubble-sort';
 
   const [selectedAlgo, setSelectedAlgo] = useState<AlgorithmType>(initialType);
@@ -58,7 +62,9 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
   useEffect(() => {
     let t: AlgorithmType = 'bubble-sort';
     if (currentAlgorithmId === 'selection-sort') t = 'selection-sort';
-    if (currentAlgorithmId === 'insertion-sort') t = 'insertion-sort';
+    else if (currentAlgorithmId === 'insertion-sort') t = 'insertion-sort';
+    else if (currentAlgorithmId === 'quick-sort') t = 'quick-sort';
+    else if (currentAlgorithmId === 'merge-sort') t = 'merge-sort';
     setSelectedAlgo(t);
     handleNewQuestion(t);
   }, [currentAlgorithmId]);
@@ -193,6 +199,32 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }`}
         >
           3. Insertion Sort (Chèn)
+        </button>
+        <button
+          onClick={() => {
+            setSelectedAlgo('quick-sort');
+            handleNewQuestion('quick-sort');
+          }}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
+            selectedAlgo === 'quick-sort'
+              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+          }`}
+        >
+          4. Quick Sort (Nhanh)
+        </button>
+        <button
+          onClick={() => {
+            setSelectedAlgo('merge-sort');
+            handleNewQuestion('merge-sort');
+          }}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
+            selectedAlgo === 'merge-sort'
+              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+          }`}
+        >
+          5. Merge Sort (Trộn)
         </button>
       </div>
 

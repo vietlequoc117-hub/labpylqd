@@ -152,6 +152,9 @@ app.post('/api/gemini/complexity', async (req, res) => {
     if (trimmed.includes('def fib(') && PRESET_COMPLEXITY_MAP['fibonacci-recursion']) {
       return res.json(PRESET_COMPLEXITY_MAP['fibonacci-recursion']);
     }
+    if (trimmed.includes('def linear_search') && PRESET_COMPLEXITY_MAP['linear-search']) {
+      return res.json(PRESET_COMPLEXITY_MAP['linear-search']);
+    }
     if (trimmed.includes('def binary_search') && PRESET_COMPLEXITY_MAP['binary-search']) {
       return res.json(PRESET_COMPLEXITY_MAP['binary-search']);
     }

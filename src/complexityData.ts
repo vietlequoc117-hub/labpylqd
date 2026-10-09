@@ -148,6 +148,23 @@ export const PRESET_COMPLEXITY_MAP: Record<string, ComplexityReport> = {
       'Dùng 2 biến lặp a, b để đạt O(n) thời gian và O(1) không gian nhớ.',
     ],
   },
+  'linear-search': {
+    timeComplexity: 'O(n)',
+    spaceComplexity: 'O(1)',
+    auxiliaryStackSpace: 'O(1) (Chỉ 1 stack frame)',
+    heapAllocation: 'O(1) (Không cấp phát thêm mảng mới)',
+    recurrenceRelation: 'T(n) = T(n-1) + O(1) (Worst-case)',
+    timeExplanation:
+      'Trường hợp xấu nhất (phần tử ở cuối mảng hoặc không có trong mảng): cần duyệt qua toàn bộ n phần tử -> O(n). Trường hợp tốt nhất (phần tử ở ngay vị trí đầu tiên index 0) -> O(1). Trung bình cần n/2 phép so sánh -> O(n).',
+    spaceExplanation:
+      'Chỉ sử dụng 1 biến đếm nguyên i để duyệt qua mảng, không tạo mảng phụ hay dữ liệu phụ -> O(1) Auxiliary Space.',
+    keyOperationsCount: 'Tối đa n phép so sánh (Worst-case)',
+    optimizationTips: [
+      'Áp dụng được cho cả mảng chưa sắp xếp (Unsorted array).',
+      'Nếu mảng đã được sắp xếp sẵn và cần tìm kiếm nhiều lần, nên chuyển sang Tìm kiếm nhị phân (Binary Search) để đạt O(log n).',
+      'Có thể dùng cấu trúc băm (Hash Table / Dict) để tìm kiếm đạt O(1) trung bình nếu có đủ bộ nhớ.',
+    ],
+  },
   'binary-search': {
     timeComplexity: 'O(log n)',
     spaceComplexity: 'O(1)',
