@@ -6,6 +6,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './src/complexityData.ts';
+import { getHighSchoolPedagogy } from './src/services/aiTutorKnowledge.ts';
 
 dotenv.config();
 
@@ -346,6 +347,150 @@ TrẢ lời bằng tiếng Việt sư phạm, dễ hiểu.`;
     return res.json({
       response:
         'Hệ thống đang hoạt động ổn định. Bạn có thể tiếp tục xem trực quan hóa các bước thực thi trên sơ đồ bộ nhớ.',
+    });
+  }
+});
+
+// Dedicated High School AI Algorithm Tutor Endpoint
+app.post('/api/gemini/high-school-tutor', async (req, res) => {
+  try {
+    const {
+      algorithmId = 'bubble-sort',
+      algorithmName = 'Thuật toán',
+      code = '',
+      mode = 'concept',
+      userQuestion = '',
+      currentStep = null,
+      stdinInput = '',
+    } = req.body;
+
+    const fallbackPedagogy = getHighSchoolPedagogy(algorithmId);
+
+    // Fallback response generator when Gemini API is unconfigured, offline, or rate-limited
+    const getFallbackContent = () => {
+      switch (mode) {
+        case 'concept':
+          return fallbackPedagogy.realLifeAnalogy;
+        case 'code_breakdown':
+          return fallbackPedagogy.codeBreakdown;
+        case 'complexity':
+          return fallbackPedagogy.complexityExplanation;
+        case 'exam_tips':
+          return fallbackPedagogy.examTipsAndTraps;
+        case 'step_insight':
+          if (currentStep) {
+            return `📍 **Phân tích bước hiện tại (Dòng ${currentStep.line_number || '-'}):**\n- Sự kiện: \`${currentStep.event || 'line'}\`.\n- Giá trị các biến hiện thời: \`${JSON.stringify(currentStep.stack_frames?.[currentStep.stack_frames.length - 1]?.variables || {})}\`.\n- Dòng lệnh này đang thực hiện thao tác duyệt hoặc so sánh/hoán đổi trong thuật toán. Bạn hãy quan sát biến đổi trên biểu đồ cột trực quan!`;
+          }
+          return 'Chưa có bước thực thi nào được chọn. Hãy bấm Chạy Chương Trình và bấm Tiếp Tục từng bước để xem phân tích.';
+        case 'chat':
+          if (userQuestion) {
+            // Check matching keywords in userQuestion
+            const qLower = userQuestion.toLowerCase();
+            if (qLower.includes('độ phức tạp') || qLower.includes('big-o') || qLower.includes('o(n')) {
+              return fallbackPedagogy.complexityExplanation;
+            }
+            if (qLower.includes('dòng') || qLower.includes('code') || qLower.includes('vòng lặp') || qLower.includes('tại sao')) {
+              return `${fallbackPedagogy.codeBreakdown}\n\n💡 **Lời khuyên thêm:** ${fallbackPedagogy.examTipsAndTraps}`;
+            }
+            if (qLower.includes('bẫy') || qLower.includes('sai') || qLower.includes('thi') || qLower.includes('mẹo')) {
+              return fallbackPedagogy.examTipsAndTraps;
+            }
+            return `Chào bạn! Với thuật toán **${fallbackPedagogy.name}**:\n\n${fallbackPedagogy.realLifeAnalogy}\n\nNếu bạn muốn tìm hiểu sâu hơn, hãy chọn các nút phân tích nhanh ở trên hoặc hỏi thêm nhé!`;
+          }
+          return fallbackPedagogy.realLifeAnalogy;
+        default:
+          return fallbackPedagogy.realLifeAnalogy;
+      }
+    };
+
+    if (!process.env.GEMINI_API_KEY || isQuotaExhausted()) {
+      return res.json({
+        response: getFallbackContent(),
+        mode,
+        isFallback: true,
+      });
+    }
+
+    // Build pedagogical prompt for High School Students (THPT)
+    let prompt = `Bạn là Thầy/Cô Trợ lí AI Chuyên Biệt Giải Thích Thuật Toán cho Học Sinh Cấp THPT (Lớp 10, 11, 12) của nền tảng LQD_PYTHON_LAB.
+Nhiệm vụ: Giải thích thuật toán và code Python một cách CỰC KỲ DỄ HIỂU, TRỰC QUAN, GẦN GŨI với lứa tuổi học sinh cấp 3.
+
+Thông tin thuật toán hiện tại:
+- Tên thuật toán: "${algorithmName}" (Mã: ${algorithmId})
+- Dữ liệu đầu vào: ${stdinInput || '(Mặc định)'}
+- Đoạn mã Python học sinh đang học:
+\`\`\`python
+${code || '# Chưa có code'}
+\`\`\`
+`;
+
+    if (currentStep) {
+      prompt += `\nTrạng thái bước thực thi hiện tại:
+- Dòng lệnh: ${currentStep.line_number}
+- Biến hiện có: ${JSON.stringify(currentStep.stack_frames?.[currentStep.stack_frames.length - 1]?.variables || {})}
+- Stdout: ${currentStep.stdout || '(trống)'}
+`;
+    }
+
+    if (mode === 'concept') {
+      prompt += `\nYêu cầu: Hãy giải thích Ý TƯỞNG CỐT LÕI của thuật toán này bằng một VÍ DỤ ĐỜI SỐNG THỰC TẾ cực kỳ sinh động và quen thuộc (như xếp hàng chào cờ, lật từ điển, nhặt đồ, chia bài...).
+Nêu rõ tại sao con người lại nghĩ ra cách làm này. Trình bày bằng Markdown đẹp mắt, có emoji, gạch đầu dòng rõ ràng.`;
+    } else if (mode === 'code_breakdown') {
+      prompt += `\nYêu cầu: Hãy MỔ XẺ TỪNG DÒNG CODE Python trên.
+Giải thích cho học sinh hiểu:
+- Từng vòng lặp for/while chạy từ đâu đến đâu và để làm gì?
+- Câu lệnh điều kiện if kiểm tra cái gì?
+- Các biến (như swapped, key, pivot, mid, left, right...) có vai trò gì?
+Trình bày sư phạm, dễ nhớ, làm nổi bật logic của bài.`;
+    } else if (mode === 'complexity') {
+      prompt += `\nYêu cầu: Hãy giải thích ĐỘ PHỨC TẠP THỜI GIAN Big-O (O(n), O(n^2), O(n log n), O(log n)) cho học sinh THPT dễ hiểu nhất:
+- Không dùng công thức vi tích phân phức tạp.
+- Đếm số lần so sánh/lặp một cách trực quan.
+- Phân biệt rõ Best case (khi nào nhanh nhất), Worst case (khi nào chậm nhất).
+- So sánh ví dụ khi n = 10, n = 100, n = 1000 thì mất bao nhiêu bước tính.`;
+    } else if (mode === 'exam_tips') {
+      prompt += `\nYêu cầu: Hãy chỉ ra CÁC BẪY HỌC SINH HAY SAI & MẸO LÀM BÀI THI TRẮC NGHIỆM TIN HỌC THPT về thuật toán này:
+- Những lỗi sai kinh điển khi viết code (IndexError, nhầm dấu so sánh, quên đổi chỗ, nhầm điều kiện dừng...).
+- Câu hỏi trắc nghiệm lý thuyết hay gài bẫy (tính ổn định Stable, số lần hoán đổi, số bước lặp sau k lượt...).
+- Mẹo ghi nhớ nhanh để không bị nhầm lẫn giữa các thuật toán.`;
+    } else if (mode === 'step_insight') {
+      prompt += `\nYêu cầu: Hãy giải thích ngắn gọn (3-4 câu) chuyện gì vừa xảy ra ở bước thực thi dòng ${currentStep?.line_number || 'này'}?
+Biến nào vừa thay đổi giá trị? Điều gì sẽ diễn ra ở bước tiếp theo?`;
+    } else if (mode === 'chat') {
+      prompt += `\nCâu hỏi của học sinh:
+"${userQuestion}"
+
+Yêu cầu: Hãy trả lời câu hỏi của học sinh bằng giọng văn thầy/cô giáo dạy Tin học THPT ân cần, dễ hiểu, giải thích tường tận với ví dụ minh họa và code snippet nếu cần.`;
+    }
+
+    const geminiRes = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+    });
+
+    return res.json({
+      response: geminiRes.text || getFallbackContent(),
+      mode,
+      isFallback: false,
+    });
+  } catch (apiError: any) {
+    if (
+      apiError?.status === 429 ||
+      apiError?.status === 'RESOURCE_EXHAUSTED' ||
+      (typeof apiError?.message === 'string' && apiError.message.includes('429'))
+    ) {
+      markQuotaExhausted();
+    }
+    const fallbackPedagogy = getHighSchoolPedagogy(req.body.algorithmId || 'bubble-sort');
+    let fallbackText = fallbackPedagogy.realLifeAnalogy;
+    if (req.body.mode === 'code_breakdown') fallbackText = fallbackPedagogy.codeBreakdown;
+    else if (req.body.mode === 'complexity') fallbackText = fallbackPedagogy.complexityExplanation;
+    else if (req.body.mode === 'exam_tips') fallbackText = fallbackPedagogy.examTipsAndTraps;
+
+    return res.json({
+      response: fallbackText,
+      mode: req.body.mode || 'concept',
+      isFallback: true,
     });
   }
 });

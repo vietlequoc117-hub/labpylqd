@@ -14,11 +14,15 @@ import {
   Sliders,
   CheckCircle2,
   ListOrdered,
+  Type,
+  Binary,
 } from 'lucide-react';
 import { TraceStep, StackFrame, HeapObject } from '../types';
 
-// Trích xuất danh sách giá trị số của mảng từ bất kỳ TraceStep nào
-const extractArrayFromStep = (step?: TraceStep): number[] | null => {
+export type VisualItemValue = number | string;
+
+// Trích xuất danh sách giá trị (số hoặc chuỗi/kí tự) của mảng từ bất kỳ TraceStep nào
+const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
   if (!step?.heap_objects) return null;
   const activeFrame =
     step.stack_frames?.find((f) => f.is_active) ||
@@ -26,28 +30,71 @@ const extractArrayFromStep = (step?: TraceStep): number[] | null => {
     step.stack_frames?.[0];
   const vars = activeFrame?.variables || {};
 
-  const preferredNames = ['arr', 'numbers', 'user_data', 'a', 'nums', 'data', 'list'];
+  const preferredNames = [
+    'arr',
+    'numbers',
+    'user_data',
+    'a',
+    'nums',
+    'data',
+    'list',
+    'words',
+    'chars',
+    'characters',
+    'string_arr',
+    's',
+    'text',
+  ];
+
   for (const name of preferredNames) {
     const varVal = vars[name];
     if (varVal && varVal.ref_id) {
       const heapObj = step.heap_objects[varVal.ref_id];
-      if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-        const nums = heapObj.elements
-          .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-          .filter((n) => !isNaN(n));
-        if (nums.length > 0) return nums;
+      if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+        const items = heapObj.elements
+          .map((el) => {
+            if (typeof el.value === 'number') return el.value;
+            if (typeof el.value === 'string') {
+              if (el.type === 'str') return el.value;
+              const n = parseFloat(el.value);
+              return !isNaN(n) ? n : el.value;
+            }
+            return null;
+          })
+          .filter((v): v is VisualItemValue => v !== null);
+        if (items.length > 0) return items;
       }
     }
   }
 
   for (const [_, heapObj] of Object.entries(step.heap_objects)) {
-    if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-      const nums = heapObj.elements
-        .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-        .filter((n) => !isNaN(n));
-      if (nums.length > 0) return nums;
+    if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+      const items = heapObj.elements
+        .map((el) => {
+          if (typeof el.value === 'number') return el.value;
+          if (typeof el.value === 'string') {
+            if (el.type === 'str') return el.value;
+            const n = parseFloat(el.value);
+            return !isNaN(n) ? n : el.value;
+          }
+          return null;
+        })
+        .filter((v): v is VisualItemValue => v !== null);
+      if (items.length > 0) return items;
     }
   }
+
+  // Nếu không có list trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "PYTHON")
+  for (const name of preferredNames) {
+    const varVal = vars[name];
+    if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+      const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+      if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+        return rawStr.split('');
+      }
+    }
+  }
+
   return null;
 };
 
@@ -113,7 +160,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   // Theme toggle: 'light' (chuẩn như ảnh người dùng gửi) hoặc 'dark' (đồng bộ app)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  // 1. Trích xuất mảng số từ currentStep hoặc mã code
+  // 1. Trích xuất mảng (số hoặc xâu kí tự) từ currentStep hoặc mã code
   const activeFrame =
     currentStep?.stack_frames?.find((f) => f.is_active) ||
     currentStep?.stack_frames?.[currentStep.stack_frames.length - 1] ||
@@ -125,33 +172,73 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   const arrayData = useMemo(() => {
     if (!currentStep?.heap_objects) return null;
 
-    // Tìm trong activeFrame trước: ưu tiên tên 'arr', 'numbers', 'a', 'nums', 'data'
-    const preferredNames = ['arr', 'numbers', 'user_data', 'a', 'nums', 'data', 'list'];
+    const preferredNames = [
+      'arr',
+      'numbers',
+      'user_data',
+      'a',
+      'nums',
+      'data',
+      'list',
+      'words',
+      'chars',
+      'characters',
+      'string_arr',
+      's',
+      'text',
+    ];
+
     for (const name of preferredNames) {
       const varVal = currentVars[name];
       if (varVal && varVal.ref_id) {
         const heapObj = currentStep.heap_objects[varVal.ref_id];
-        if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-          const nums = heapObj.elements
-            .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-            .filter((n) => !isNaN(n));
-          if (nums.length > 0) {
-            return { name, values: nums, elements: heapObj.elements };
+        if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+          const items: VisualItemValue[] = heapObj.elements
+            .map((el) => {
+              if (typeof el.value === 'number') return el.value;
+              if (typeof el.value === 'string') {
+                if (el.type === 'str') return el.value;
+                const n = parseFloat(el.value);
+                return !isNaN(n) ? n : el.value;
+              }
+              return null;
+            })
+            .filter((v): v is VisualItemValue => v !== null);
+          if (items.length > 0) {
+            return { name, values: items, elements: heapObj.elements };
           }
         }
       }
     }
 
-    // Nếu không tìm thấy theo tên, tìm bất kỳ list số nào trong heap_objects
+    // Nếu không tìm thấy theo tên ưu tiên, tìm bất kỳ list nào trong heap_objects
     for (const [id, heapObj] of Object.entries(currentStep.heap_objects)) {
-      if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-        const nums = heapObj.elements
-          .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-          .filter((n) => !isNaN(n));
-        if (nums.length > 0) {
-          // Tìm tên biến trỏ tới list này
+      if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+        const items: VisualItemValue[] = heapObj.elements
+          .map((el) => {
+            if (typeof el.value === 'number') return el.value;
+            if (typeof el.value === 'string') {
+              if (el.type === 'str') return el.value;
+              const n = parseFloat(el.value);
+              return !isNaN(n) ? n : el.value;
+            }
+            return null;
+          })
+          .filter((v): v is VisualItemValue => v !== null);
+        if (items.length > 0) {
           const varEntry = Object.entries(currentVars).find(([_, v]) => v.ref_id === id);
-          return { name: varEntry ? varEntry[0] : 'arr', values: nums, elements: heapObj.elements };
+          return { name: varEntry ? varEntry[0] : 'arr', values: items, elements: heapObj.elements };
+        }
+      }
+    }
+
+    // Fallback nếu có xâu kí tự nguyên thủy
+    for (const name of preferredNames) {
+      const varVal = currentVars[name];
+      if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+        const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+        if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+          return { name, values: rawStr.split(''), elements: [] };
         }
       }
     }
@@ -162,7 +249,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   // Trích xuất i, j tại bước hiện tại
   const currentIndices = extractIndicesFromStep(currentStep);
 
-  // Tổng hợp danh sách chốt kết quả dãy số sau mỗi lượt chạy của vòng lặp i
+  // Tổng hợp danh sách chốt kết quả dãy số/xâu sau mỗi lượt chạy của vòng lặp i
   const iPassSnapshots = useMemo(() => {
     if (!allSteps || allSteps.length === 0) return [];
 
@@ -170,7 +257,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       label: string;
       iVal: number;
       stepIndex: number;
-      array: number[];
+      array: VisualItemValue[];
       isFinal?: boolean;
     }
 
@@ -220,9 +307,14 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   }, [allSteps]);
 
   // Fallback: Mảng mẫu mặc định đúng như trong ảnh nếu chưa chạy bước nào
-  const sampleArrayValues = [6, 11, 11, 21, 27, 49, 46, 35, 37, 35];
-  const values = arrayData?.values || sampleArrayValues;
+  const sampleArrayValues: VisualItemValue[] = [6, 11, 11, 21, 27, 49, 46, 35, 37, 35];
+  const values: VisualItemValue[] = arrayData?.values || sampleArrayValues;
   const arrayName = arrayData?.name || 'arr';
+
+  // Kiểm tra kiểu dữ liệu: mảng số hay xâu kí tự
+  const isStringData = useMemo(() => {
+    return values.some((v) => typeof v === 'string');
+  }, [values]);
 
   // 2. Trích xuất các biến con trỏ chỉ số (i, j, min_idx, key, pivot, mid, left, right...)
   const pointers = useMemo(() => {
@@ -239,18 +331,95 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     return map;
   }, [currentVars, values.length]);
 
-  // 3. Xác định màu sắc từng cột theo thuật toán đúng như trong ảnh người dùng:
-  // - Màu Cam (Orange #f59e0b): Vùng đã sắp xếp / Đã xử lý (ở ảnh là các chỉ số 0..4)
-  // - Màu Đỏ (Crimson #e11d48): Phần tử đang được chọn / đang so sánh (ở ảnh là chỉ số 7)
-  // - Màu Xanh Nhạt (Sky Blue #7dd3fc): Vùng chưa sắp xếp / còn lại (ở ảnh là 5, 6, 8, 9)
+  // Trích xuất giá trị mục tiêu tìm kiếm (target / can_tim) nếu có
+  const searchTargetInfo = useMemo(() => {
+    const targetVar = currentVars['target'] || currentVars['can_tim'];
+    if (!targetVar) return null;
+    let rawVal = targetVar.value;
+    if (typeof rawVal === 'string') {
+      rawVal = rawVal.replace(/^['"]|['"]$/g, '');
+    }
+    return {
+      name: currentVars['target'] ? 'target' : 'can_tim',
+      value: rawVal,
+    };
+  }, [currentVars]);
+
+  // 3. Chuẩn hóa giá trị các cột để tính toán chiều cao tối ưu cho cả Số và Xâu kí tự
+  const barItems = useMemo(() => {
+    const rawItems = values.map((val) => {
+      let display = String(val);
+      let numericVal = 0;
+      let ascii: number | undefined = undefined;
+
+      if (typeof val === 'number') {
+        numericVal = val;
+      } else {
+        // Xâu hoặc kí tự đơn
+        if (val.length === 1) {
+          ascii = val.charCodeAt(0);
+          numericVal = ascii;
+        } else {
+          // Từ vựng: dùng mã chữ cái đầu làm trọng số chính + chữ cái thứ 2
+          ascii = val.charCodeAt(0);
+          numericVal = val.charCodeAt(0) * 1000 + (val.charCodeAt(1) ? val.charCodeAt(1) : 0);
+        }
+      }
+      return { raw: val, display, numericVal, ascii };
+    });
+
+    const numericVals = rawItems.map((r) => r.numericVal);
+    const minNum = Math.min(...numericVals);
+    const maxNum = Math.max(...numericVals);
+
+    return rawItems.map((item) => {
+      let heightPercent = 20;
+
+      if (isStringData) {
+        // Tối ưu biểu diễn Xâu kí tự: kéo giãn khoảng cách chiều cao từ 18% đến 92%
+        // để tạo độ dốc bậc thang cực kỳ rõ ràng giữa các chữ cái (A -> Z)!
+        if (maxNum === minNum) {
+          heightPercent = 55;
+        } else {
+          heightPercent = Math.round(18 + ((item.numericVal - minNum) / (maxNum - minNum)) * 74);
+        }
+      } else {
+        // Dữ liệu số nguyên: theo tỉ lệ phần trăm giá trị lớn nhất
+        const maxVal = Math.max(maxNum, 1);
+        heightPercent = Math.max(14, Math.round((item.numericVal / maxVal) * 100));
+      }
+
+      return {
+        ...item,
+        heightPercent,
+      };
+    });
+  }, [values, isStringData]);
+
+  // 4. Xác định màu sắc từng cột theo thuật toán:
+  // - Màu Cam (Orange #f59e0b): Vùng đã sắp xếp / Đã xử lý
+  // - Màu Đỏ (Crimson #e11d48): Phần tử đang được chọn / đang so sánh (Active)
+  // - Màu Xanh Nhạt (Sky Blue #7dd3fc): Vùng chưa sắp xếp / còn lại
+  // - Màu Xanh Lá (Emerald #10b981): Khi mảng hoàn thành sắp xếp hoặc tìm thấy mục tiêu
   const getBarColorType = (index: number): 'orange' | 'red' | 'blue' | 'green' => {
-    // Nếu có pointer đang trỏ tới đúng vị trí này:
-    // Con trỏ đang xét (i hoặc j hoặc key hoặc min_idx)
+    // Nếu tìm kiếm nhị phân hoặc tuần tự tìm thấy mục tiêu:
+    const item = values[index];
+    const isTargetMatch =
+      searchTargetInfo &&
+      (String(item) === String(searchTargetInfo.value) ||
+        (typeof item === 'number' && Number(searchTargetInfo.value) === item)) &&
+      (pointers['mid'] === index || pointers['i'] === index);
+
+    if (isTargetMatch) {
+      return 'green';
+    }
+
+    // Con trỏ đang xét (i hoặc j hoặc key hoặc min_idx hoặc mid)
     const isRedHighlight =
       pointers['i'] === index ||
       pointers['min_idx'] === index ||
       pointers['mid'] === index ||
-      (currentStepIndex > 0 && index === 7 && !arrayData); // Mẫu ảnh index 7 màu đỏ
+      (currentStepIndex > 0 && index === 7 && !arrayData);
 
     if (isRedHighlight) {
       return 'red';
@@ -261,7 +430,6 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     }
 
     // Kiểm tra vùng đã sắp xếp:
-    // Trong Insertion Sort / Bubble Sort / Selection Sort, các phần tử từ 0 đến i-1 hoặc từ n-i đến n-1 là đã sắp xếp
     const iVal = pointers['i'];
     if (iVal !== undefined) {
       if (code.includes('insertion_sort') && index < iVal) {
@@ -290,10 +458,6 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     return 'blue';
   };
 
-  // Tính chiều cao tối đa của cột
-  const maxValue = Math.max(...values, 1);
-  const chartHeightPx = 220; // chiều cao khu vực biểu đồ
-
   return (
     <div
       className={`rounded-2xl border transition-all duration-300 shadow-xl overflow-hidden flex flex-col ${
@@ -310,19 +474,43 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
             : 'bg-slate-950/80 border-slate-800 text-slate-200'
         }`}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="p-1 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400">
             <BarChart2 className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-bold text-sm">Biểu Đồ Cột Trực Quan (Array Bar Chart)</span>
-            <span className="ml-2 font-mono text-[11px] text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm">Biểu Đồ Cột Trực Quan (Array Bar Chart)</span>
+              {isStringData ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                  <Type className="w-3 h-3" />
+                  <span>Xâu Kí Tự / Bảng mã ASCII</span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/40 flex items-center gap-1">
+                  <Binary className="w-3 h-3" />
+                  <span>Mảng Số Nguyên</span>
+                </span>
+              )}
+            </div>
+            <span className="font-mono text-[11px] text-slate-500">
               {arrayName}[0..{values.length - 1}] ({values.length} phần tử)
+              {isStringData && ' • Sắp xếp chuẩn theo thứ tự từ điển & ASCII'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Badge mục tiêu tìm kiếm (nếu có) */}
+          {searchTargetInfo && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-[11px]">
+              <span className="font-semibold">Mục tiêu {searchTargetInfo.name}:</span>
+              <strong className="px-1.5 py-0.2 rounded bg-emerald-500 text-white font-bold">
+                {String(searchTargetInfo.value)}
+              </strong>
+            </div>
+          )}
+
           {/* Nút đổi giao diện Sáng / Tối */}
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -331,7 +519,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
                 ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
                 : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
             }`}
-            title={theme === 'light' ? 'Chuyển sang giao diện Tối' : 'Chuyển sang giao diện Sáng (như ảnh)'}
+            title={theme === 'light' ? 'Chuyển sang giao diện Tối' : 'Chuyển sang giao diện Sáng'}
           >
             {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
           </button>
@@ -341,7 +529,9 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       {/* Chú thích màu sắc (Legend) */}
       <div
         className={`px-4 py-1.5 flex items-center justify-between text-[11px] border-b flex-wrap gap-2 ${
-          theme === 'light' ? 'bg-slate-100/60 border-slate-200 text-slate-600' : 'bg-slate-950/40 border-slate-800 text-slate-400'
+          theme === 'light'
+            ? 'bg-slate-100/60 border-slate-200 text-slate-600'
+            : 'bg-slate-950/40 border-slate-800 text-slate-400'
         }`}
       >
         <div className="flex items-center gap-4 flex-wrap">
@@ -359,6 +549,11 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
             <span className="w-3 h-3 rounded-sm bg-[#7dd3fc] border border-sky-400/40 shadow-sm"></span>
             <span className="font-medium">Chưa sắp xếp / Còn lại</span>
           </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-[#10b981] shadow-sm"></span>
+            <span className="font-medium">Tìm thấy / Hoàn thành</span>
+          </div>
         </div>
 
         {/* Thông tin bước hiện tại */}
@@ -367,19 +562,17 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
         </div>
       </div>
 
-      {/* KHU VỰC VẼ BIỂU ĐỒ CỘT (CHÍNH XÁC NHƯ TRONG ẢNH) */}
+      {/* KHU VỰC VẼ BIỂU ĐỒ CỘT (CHÍNH XÁC & TỐI ƯU CẢ CHO SỐ VÀ XÂU KÍ TỰ) */}
       <div
-        className={`p-6 md:p-8 flex flex-col justify-end items-center relative overflow-x-auto min-h-[300px] select-none ${
+        className={`p-6 md:p-8 flex flex-col justify-end items-center relative overflow-x-auto min-h-[310px] select-none ${
           theme === 'light' ? 'bg-[#e5e9ec]' : 'bg-[#0b1120]'
         }`}
       >
         {/* Container chứa tất cả các cột mảng */}
         <div className="flex items-end justify-center gap-1.5 sm:gap-2.5 w-full max-w-3xl h-[230px] pb-2 border-b-2 border-slate-400/50 dark:border-slate-700">
-          {values.map((val, idx) => {
+          {barItems.map((item, idx) => {
             const colorType = getBarColorType(idx);
-
-            // Chiều cao cột tương ứng giá trị (tối thiểu 14% để vẫn thấy cột nhỏ như 6)
-            const heightPercent = Math.max(14, Math.round((val / maxValue) * 100));
+            const heightPercent = item.heightPercent;
 
             // Màu sắc cột
             let barBg = '#7dd3fc'; // Xanh nhạt
@@ -396,6 +589,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
             } else if (colorType === 'green') {
               barBg = '#10b981'; // Xanh lá
               textColor = '#ffffff';
+              borderColor = '#047857';
             }
 
             // Có con trỏ trỏ vào cột này không?
@@ -404,19 +598,25 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
               .map(([name]) => name);
 
             const isRedSelected = colorType === 'red';
+            const isGreenSuccess = colorType === 'green';
 
             return (
               <div
                 key={idx}
-                className="flex-1 max-w-[56px] min-w-[32px] h-full flex flex-col justify-end items-center relative group"
+                className="flex-1 max-w-[56px] min-w-[34px] h-full flex flex-col justify-end items-center relative group"
               >
-                {/* 1. Nhãn giá trị: Nằm trên đỉnh cột (nếu cột quá thấp như 6) hoặc bên trong đỉnh cột */}
-                {heightPercent < 22 && (
-                  <span
-                    className="font-sans font-bold text-sm md:text-base mb-1 tracking-tight text-slate-800 dark:text-slate-100 transition-all"
-                  >
-                    {val}
-                  </span>
+                {/* 1. Nhãn giá trị: Nằm trên đỉnh cột nếu cột thấp */}
+                {heightPercent < 24 && (
+                  <div className="flex flex-col items-center mb-1 transition-all">
+                    <span className="font-sans font-bold text-sm md:text-base tracking-tight text-slate-800 dark:text-slate-100">
+                      {item.display}
+                    </span>
+                    {item.ascii !== undefined && (
+                      <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 font-medium leading-none">
+                        #{item.ascii}
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* 2. Thanh Cột Hình Chữ Nhật (Bar) */}
@@ -426,33 +626,54 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
                     backgroundColor: barBg,
                     borderColor: borderColor,
                   }}
-                  className={`w-full rounded-t-sm flex items-center justify-center transition-all duration-300 shadow-sm relative ${
+                  className={`w-full rounded-t-sm flex flex-col items-center justify-center transition-all duration-300 shadow-sm relative ${
                     isRedSelected ? 'ring-2 ring-rose-400 shadow-lg scale-[1.02]' : ''
-                  }`}
+                  } ${isGreenSuccess ? 'ring-2 ring-emerald-400 shadow-lg scale-[1.02]' : ''}`}
                 >
-                  {/* Nếu cột đủ cao, in giá trị bên trong cột (như trong ảnh ở các số 11, 21, 27, 49, 46, 35, 37, 35) */}
-                  {heightPercent >= 22 && (
-                    <span
-                      style={{ color: textColor }}
-                      className="font-sans font-bold text-sm md:text-base tracking-tight select-none"
-                    >
-                      {val}
-                    </span>
+                  {/* Nếu cột đủ cao, in giá trị bên trong cột */}
+                  {heightPercent >= 24 && (
+                    <div className="flex flex-col items-center select-none py-1 leading-tight">
+                      <span
+                        style={{ color: textColor }}
+                        className="font-sans font-bold text-sm md:text-base tracking-tight"
+                      >
+                        {item.display}
+                      </span>
+                      {item.ascii !== undefined && (
+                        <span
+                          style={{ color: textColor, opacity: 0.75 }}
+                          className="text-[9px] font-mono font-bold leading-none mt-0.5"
+                          title={`Mã ASCII: ${item.ascii}`}
+                        >
+                          #{item.ascii}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {/* 3. Chỉ số mảng (Index) ở chân cột: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 */}
+                {/* 3. Chỉ số mảng (Index) ở chân cột */}
                 <div className="mt-2 text-center">
                   <span className="font-sans text-sm md:text-base font-normal text-slate-800 dark:text-slate-200">
                     {idx}
                   </span>
                 </div>
 
-                {/* 4. Con trỏ chỉ số (Pointers): i, j, min_idx... */}
+                {/* 4. Con trỏ chỉ số (Pointers): i, j, mid, min_idx... */}
                 {activePointersAtIdx.length > 0 && (
-                  <div className="absolute -bottom-7 flex flex-col items-center animate-bounce">
-                    <span className="text-[10px] text-rose-500 font-bold">▲</span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-rose-500 text-white shadow-sm">
+                  <div className="absolute -bottom-7 flex flex-col items-center animate-bounce z-10">
+                    <span
+                      className={`text-[10px] font-bold ${
+                        isGreenSuccess ? 'text-emerald-500' : 'text-rose-500'
+                      }`}
+                    >
+                      ▲
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded text-white shadow-sm whitespace-nowrap ${
+                        isGreenSuccess ? 'bg-emerald-600' : 'bg-rose-500'
+                      }`}
+                    >
                       {activePointersAtIdx.join(', ')}
                     </span>
                   </div>
@@ -519,17 +740,19 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
             )}
           </div>
 
-          {/* Khối chốt kết quả dãy số */}
+          {/* Khối chốt kết quả dãy số / xâu */}
           <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-sm">
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
               {currentStepIndex === totalSteps - 1
                 ? '✅ Chốt kết quả cuối cùng:'
                 : currentIndices.i !== undefined
-                ? `🎯 Chốt dãy số sau lượt (${currentIndices.i !== undefined ? `i=${currentIndices.i}` : ''}${currentIndices.j !== undefined ? `, j=${currentIndices.j}` : ''}):`
-                : '🎯 Chốt dãy số hiện tại:'}
+                ? `🎯 Chốt dãy sau lượt (${
+                    currentIndices.i !== undefined ? `i=${currentIndices.i}` : ''
+                  }${currentIndices.j !== undefined ? `, j=${currentIndices.j}` : ''}):`
+                : '🎯 Chốt dữ liệu hiện tại:'}
             </span>
             <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-wide">
-              [{values.join(', ')}]
+              [{values.map((v) => (typeof v === 'string' ? `'${v}'` : v)).join(', ')}]
             </span>
           </div>
         </div>
@@ -545,7 +768,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           <div className="flex items-center justify-between flex-wrap gap-1">
             <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-bold text-[11px]">
               <ListOrdered className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Chốt kết quả dãy số sau mỗi lượt chạy của i:</span>
+              <span>Chốt kết quả dữ liệu sau mỗi lượt chạy của i:</span>
             </div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:inline">
               Nhấp vào từng lượt để chuyển nhanh đến bước chốt mảng
@@ -569,10 +792,18 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
                   }`}
                   title={`Nhấp để chuyển đến bước này (bước ${snap.stepIndex + 1})`}
                 >
-                  <span className={isCurrentPass ? 'text-amber-200 font-bold' : 'text-amber-600 dark:text-amber-400 font-semibold'}>
+                  <span
+                    className={
+                      isCurrentPass
+                        ? 'text-amber-200 font-bold'
+                        : 'text-amber-600 dark:text-amber-400 font-semibold'
+                    }
+                  >
                     {snap.label}:
                   </span>
-                  <span className="font-extrabold">[{snap.array.join(', ')}]</span>
+                  <span className="font-extrabold">
+                    [{snap.array.map((v) => (typeof v === 'string' ? `'${v}'` : v)).join(', ')}]
+                  </span>
                 </button>
               );
             })}

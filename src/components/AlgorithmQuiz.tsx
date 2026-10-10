@@ -120,9 +120,6 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
               <h2 className="font-bold text-base text-slate-100">
                 Trắc Nghiệm Kiến Thức Thuật Toán
               </h2>
-              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Chuẩn cấu trúc file tt.pdf
-              </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Tự động sinh câu hỏi với <strong>dữ liệu 6 - 12 số</strong> và <strong>lượt lặp ngẫu nhiên</strong> kèm lời giải chi tiết.
@@ -455,9 +452,6 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
             Các câu hỏi được thiết kế chuẩn theo ma trận đề thi trắc nghiệm Chuyên đề Thuật toán Tin học (Nhận biết &bull; Thông hiểu &bull; Vận dụng).
           </span>
         </div>
-        <span className="text-[11px] text-slate-500 font-mono">
-          Nguồn định dạng: tt.pdf
-        </span>
       </div>
     </div>
   );

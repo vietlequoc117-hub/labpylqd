@@ -42,7 +42,7 @@ print("Mảng sau khi xử lý:", doubled_arr)
     title: '1. Bubble Sort (Sắp Xếp Nổi Bọt)',
     category: 'Thuật toán Sắp xếp',
     defaultStdin: '5 2 8 1 3',
-    description: 'So sánh từng cặp phần tử liền kề và đổi chỗ nếu chúng đứng sai thứ tự. Sau mỗi lượt lặp, phần tử lớn nhất "nổi" dần về cuối mảng.',
+    description: 'So sánh từng cặp phần tử liền kề và đổi chỗ nếu chúng đứng sai thứ tự. Tương thích tối ưu cho cả mảng số và xâu/kí tự (theo bảng mã ASCII).',
     code: `def bubble_sort(arr):
     n = len(arr)
     # Lặp qua tất cả phần tử mảng
@@ -59,12 +59,19 @@ print("Mảng sau khi xử lý:", doubled_arr)
             break
     return arr
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-print("Mảng ban đầu:", numbers)
-sorted_arr = bubble_sort(numbers)
-print("Mảng sau khi sắp xếp:", sorted_arr)
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    arr = [int(x) for x in parts]
+elif len(parts) > 1:
+    arr = parts
+else:
+    arr = list(raw.strip())
+
+print("Dữ liệu ban đầu:", arr)
+sorted_arr = bubble_sort(arr)
+print("Dữ liệu sau khi sắp xếp:", sorted_arr)
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán BubbleSort(A, n):', indent: 0, correspondingPythonLines: [1, 2], explanation: 'Định nghĩa hàm sắp xếp nổi bọt nhận mảng A độ dài n' },
@@ -84,7 +91,7 @@ print("Mảng sau khi sắp xếp:", sorted_arr)
     title: '2. Selection Sort (Sắp xếp chọn)',
     category: 'Thuật toán Sắp xếp',
     defaultStdin: '64 25 12 22 11',
-    description: 'Tại mỗi bước, tìm phần tử nhỏ nhất trong đoạn chưa được sắp xếp và hoán đổi nó về vị trí đầu tiên của đoạn đó.',
+    description: 'Tại mỗi bước, tìm phần tử nhỏ nhất trong đoạn chưa được sắp xếp và hoán đổi nó về vị trí đầu tiên của đoạn đó. Hỗ trợ mảng số và xâu kí tự.',
     code: `def selection_sort(arr):
     n = len(arr)
     for i in range(n - 1):
@@ -98,12 +105,19 @@ print("Mảng sau khi sắp xếp:", sorted_arr)
             arr[i], arr[min_idx] = arr[min_idx], arr[i]
     return arr
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-print("Mảng ban đầu:", numbers)
-selection_sort(numbers)
-print("Mảng sau khi sắp xếp:", numbers)
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    arr = [int(x) for x in parts]
+elif len(parts) > 1:
+    arr = parts
+else:
+    arr = list(raw.strip())
+
+print("Dữ liệu ban đầu:", arr)
+selection_sort(arr)
+print("Dữ liệu sau khi sắp xếp:", arr)
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán SelectionSort(A, n):', indent: 0, correspondingPythonLines: [1, 2], explanation: 'Định nghĩa thuật toán sắp xếp chọn' },
@@ -135,12 +149,19 @@ print("Mảng sau khi sắp xếp:", numbers)
         arr[j + 1] = key
     return arr
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (Standard Input / stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-print("Mảng ban đầu:", numbers)
-insertion_sort(numbers)
-print("Mảng sau khi chèn:", numbers)
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    arr = [int(x) for x in parts]
+elif len(parts) > 1:
+    arr = parts
+else:
+    arr = list(raw.strip())
+
+print("Dữ liệu ban đầu:", arr)
+insertion_sort(arr)
+print("Dữ liệu sau khi chèn:", arr)
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán InsertionSort(A, n):', indent: 0, correspondingPythonLines: [1], explanation: 'Định nghĩa thuật toán sắp xếp chèn' },
@@ -180,12 +201,19 @@ def quick_sort(arr, low, high):
         quick_sort(arr, pi + 1, high)
     return arr
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-print("Mảng ban đầu:", numbers)
-quick_sort(numbers, 0, len(numbers) - 1)
-print("Mảng sau Quick Sort:", numbers)
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    arr = [int(x) for x in parts]
+elif len(parts) > 1:
+    arr = parts
+else:
+    arr = list(raw.strip())
+
+print("Dữ liệu ban đầu:", arr)
+quick_sort(arr, 0, len(arr) - 1)
+print("Dữ liệu sau Quick Sort:", arr)
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán QuickSort(A, low, high):', indent: 0, correspondingPythonLines: [13], explanation: 'Sắp xếp nhanh đoạn A[low...high] bằng chia để trị' },
@@ -240,12 +268,19 @@ print("Mảng sau Quick Sort:", numbers)
             k += 1
     return arr
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-print("Mảng ban đầu:", numbers)
-merge_sort(numbers)
-print("Mảng sau Merge Sort:", numbers)
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    arr = [int(x) for x in parts]
+elif len(parts) > 1:
+    arr = parts
+else:
+    arr = list(raw.strip())
+
+print("Dữ liệu ban đầu:", arr)
+merge_sort(arr)
+print("Dữ liệu sau Merge Sort:", arr)
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán MergeSort(A):', indent: 0, correspondingPythonLines: [1], explanation: 'Sắp xếp trộn áp dụng chiến lược Chia để trị (Divide & Conquer)' },
@@ -307,7 +342,7 @@ for item in matrix:
     title: '7. Tìm kiếm tuần tự (Linear Search) - O(n)',
     category: 'Thuật toán Tìm kiếm',
     defaultStdin: '12 45 7 23 56 89 34',
-    description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử cần tìm hoặc duyệt hết mảng. Áp dụng được cho cả mảng chưa sắp xếp với độ phức tạp O(n).',
+    description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử cần tìm hoặc duyệt hết mảng. Áp dụng tối ưu cho cả mảng số và xâu/kí tự.',
     code: `def linear_search(arr, target):
     # Duyệt tuần tự từng phần tử từ đầu đến cuối mảng
     for i in range(len(arr)):
@@ -315,18 +350,26 @@ for item in matrix:
             return i  # Tìm thấy tại chỉ số i
     return -1  # Không tìm thấy sau khi duyệt hết mảng
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-can_tim = 23 if 23 in numbers else (numbers[len(numbers) // 2] if numbers else 0)
-print("Mảng cần tìm:", numbers)
-print("Số cần tìm:", can_tim)
-
-vi_tri = linear_search(numbers, can_tim)
-if vi_tri != -1:
-    print(f"Tìm thấy số {can_tim} tại vị trí index: {vi_tri}")
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    data = [int(x) for x in parts]
+elif len(parts) > 1:
+    data = parts
 else:
-    print(f"Không tìm thấy số {can_tim} trong mảng")
+    data = list(raw.strip())
+
+# Chọn mục tiêu cần tìm kiếm (target):
+target = data[len(data) // 2] if data else ('A' if data and isinstance(data[0], str) else 0)
+print("Dữ liệu cần tìm:", data)
+print("Mục tiêu cần tìm:", target)
+
+vi_tri = linear_search(data, target)
+if vi_tri != -1:
+    print(f"Tìm thấy '{target}' tại vị trí index: {vi_tri}")
+else:
+    print(f"Không tìm thấy '{target}' trong dữ liệu")
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán LinearSearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Duyệt tuần tự từng phần tử trong mảng A' },
@@ -341,7 +384,7 @@ else:
     title: '8. Tìm kiếm nhị phân (Binary Search) - O(log n)',
     category: 'Thuật toán Tìm kiếm',
     defaultStdin: '2 5 8 12 16 23 38 56 72 91',
-    description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị trong thời gian O(log n).',
+    description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị trong thời gian O(log n). Áp dụng tối ưu cho cả số và xâu kí tự.',
     code: `def binary_search(arr, target):
     left = 0
     right = len(arr) - 1
@@ -359,20 +402,27 @@ else:
             
     return -1  # Không tìm thấy
 
-# Nhập mảng số từ Dữ liệu đầu vào chuẩn (stdin):
-raw = input("Nhập mảng số: ")
-numbers = [int(x) for x in raw.replace(',', ' ').split() if x.strip()]
-# Đảm bảo mảng đã được sắp xếp để áp dụng tìm kiếm nhị phân:
-numbers.sort()
-can_tim = 23 if 23 in numbers else (numbers[len(numbers) // 2] if numbers else 0)
-print("Mảng đã sắp xếp:", numbers)
-print("Số cần tìm:", can_tim)
-
-vi_tri = binary_search(numbers, can_tim)
-if vi_tri != -1:
-    print(f"Tìm thấy số {can_tim} tại vị trí index: {vi_tri}")
+# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
+raw = input("Nhập mảng số hoặc xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+if all(p.lstrip('-').isdigit() for p in parts if p):
+    data = [int(x) for x in parts]
+elif len(parts) > 1:
+    data = parts
 else:
-    print(f"Không tìm thấy số {can_tim} trong mảng")
+    data = list(raw.strip())
+
+# Đảm bảo dữ liệu đã được sắp xếp để áp dụng tìm kiếm nhị phân:
+data.sort()
+target = data[len(data) // 2] if data else ('A' if data and isinstance(data[0], str) else 0)
+print("Dữ liệu đã sắp xếp:", data)
+print("Mục tiêu cần tìm:", target)
+
+vi_tri = binary_search(data, target)
+if vi_tri != -1:
+    print(f"Tìm thấy '{target}' tại vị trí index: {vi_tri}")
+else:
+    print(f"Không tìm thấy '{target}' trong dữ liệu")
 `,
     pseudocode: [
       { lineNum: 1, text: 'Thuật toán BinarySearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Tìm kiếm nhị phân trên mảng A đã có thứ tự' },
@@ -384,6 +434,46 @@ else:
       { lineNum: 7, text: 'Nếu A[mid] < target thì: left ← mid + 1', indent: 2, correspondingPythonLines: [11, 12], explanation: 'target lớn hơn số ở giữa, thu hẹp sang nửa bên phải' },
       { lineNum: 8, text: 'Ngược lại: right ← mid - 1', indent: 2, correspondingPythonLines: [13, 14], explanation: 'target nhỏ hơn số ở giữa, thu hẹp sang nửa bên trái' },
       { lineNum: 9, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [16], explanation: 'Duyệt hết mảng mà không có target' },
+    ],
+  },
+  {
+    id: 'string-sort',
+    title: '9. Sắp xếp Xâu Kí Tự (String / ASCII Sort)',
+    category: 'Thuật toán Sắp xếp',
+    defaultStdin: 'P Y T H O N',
+    description: 'Chuyên đề sắp xếp xâu kí tự và danh sách từ vựng theo bảng mã ASCII / từ điển. Biểu diễn trực quan mã ASCII và chiều cao cột tương ứng cho học sinh THPT.',
+    code: `def sort_characters(chars):
+    n = len(chars)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n - i - 1):
+            # So sánh 2 kí tự liền kề theo thứ tự bảng mã ASCII (ord(c))
+            if chars[j] > chars[j + 1]:
+                chars[j], chars[j + 1] = chars[j + 1], chars[j]
+                swapped = True
+        if not swapped:
+            break
+    return chars
+
+# Nhập xâu kí tự (ví dụ: P Y T H O N hoặc ALGORITHM hoặc B A N A N A):
+raw = input("Nhập xâu kí tự: ")
+parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
+chars = parts if len(parts) > 1 else list(raw.strip())
+
+print("Xâu kí tự ban đầu:", chars)
+print("Mã ASCII tương ứng:", [ord(c) for c in chars if len(c) == 1])
+
+sorted_chars = sort_characters(chars)
+print("Xâu sau khi sắp xếp:", sorted_chars)
+print("Ghép lại thành xâu hoàn chỉnh:", "".join(sorted_chars))
+`,
+    pseudocode: [
+      { lineNum: 1, text: 'Thuật toán StringSort(chars, n):', indent: 0, correspondingPythonLines: [1, 2], explanation: 'Định nghĩa thuật toán sắp xếp xâu kí tự nhận danh sách chars' },
+      { lineNum: 2, text: 'Lặp i từ 0 đến n - 1:', indent: 1, correspondingPythonLines: [3], explanation: 'Quét các lượt để đưa kí tự có mã ASCII lớn nhất về cuối' },
+      { lineNum: 3, text: 'Lặp j từ 0 đến n - i - 2:', indent: 2, correspondingPythonLines: [5], explanation: 'Duyệt qua các cặp kí tự kề nhau' },
+      { lineNum: 4, text: 'Nếu chars[j] > chars[j + 1] (theo mã ASCII):', indent: 3, correspondingPythonLines: [7], explanation: 'So sánh 2 chữ cái: ví dụ "Y" (ASCII 89) > "P" (ASCII 80)' },
+      { lineNum: 5, text: 'Hoán đổi chars[j] ↔ chars[j + 1]', indent: 4, correspondingPythonLines: [8], explanation: 'Đổi chỗ hai kí tự trong xâu' },
+      { lineNum: 6, text: 'Trả về xâu chars đã sắp xếp xong', indent: 1, correspondingPythonLines: [12], explanation: 'Trả về mảng kí tự theo thứ tự bảng chữ cái A-Z' },
     ],
   },
 ];

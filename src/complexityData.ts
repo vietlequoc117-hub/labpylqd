@@ -83,6 +83,22 @@ export const PRESET_COMPLEXITY_MAP: Record<string, ComplexityReport> = {
       'Rất phù hợp cho sắp xếp dữ liệu ngoài (External Sorting) hoặc danh sách liên kết (Linked List) vì không đòi hỏi truy cập ngẫu nhiên theo chỉ số.',
     ],
   },
+  'string-sort': {
+    timeComplexity: 'O(n²)',
+    spaceComplexity: 'O(1)',
+    auxiliaryStackSpace: 'O(1) (1 stack frame)',
+    heapAllocation: 'O(1) bộ nhớ phụ',
+    recurrenceRelation: 'T(n) = n*(n-1)/2 phép so sánh ASCII',
+    timeExplanation:
+      'Sắp xếp xâu kí tự dựa trên so sánh mã ASCII của từng kí tự ord(c). Với n kí tự, thuật toán thực hiện tối đa n*(n-1)/2 phép so sánh kí tự -> O(n²). Với xâu ngắn dưới 100 kí tự, thời gian thực thi gần như tức thì.',
+    spaceExplanation:
+      'Trực tiếp hoán đổi các kí tự tại chỗ trong danh sách kí tự chars, không tốn thêm bộ nhớ đệm -> O(1) Auxiliary Space.',
+    keyOperationsCount: 'Tối đa n * (n - 1) / 2 phép so sánh kí tự',
+    optimizationTips: [
+      'Trong Python thực tế, dùng sorted("PYTHON") hoặc "".join(sorted(s)) để tận dụng thuật toán Timsort C-level O(n log n).',
+      'Với bảng chữ cái cố định (26 chữ cái tiếng Anh hoặc 256 kí tự ASCII), có thể dùng Counting Sort để sắp xếp trong thời gian tuyến tính O(n)!',
+    ],
+  },
   'complexity-comparison': {
     timeComplexity: 'Tổng hợp Big-O',
     spaceComplexity: 'So sánh 5 Thuật toán',

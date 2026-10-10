@@ -1,9 +1,11 @@
 import { TraceStep } from '../types';
 
+export type ArraySnapshotItem = number | string;
+
 /**
- * Trích xuất danh sách giá trị mảng số từ 1 TraceStep bất kỳ
+ * Trích xuất danh sách giá trị mảng (số hoặc xâu kí tự) từ 1 TraceStep bất kỳ
  */
-export function getArraySnapshot(step?: TraceStep): number[] | null {
+export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
   if (!step?.heap_objects) return null;
   const activeFrame =
     step.stack_frames?.find((f) => f.is_active) ||
@@ -11,28 +13,71 @@ export function getArraySnapshot(step?: TraceStep): number[] | null {
     step.stack_frames?.[0];
   const vars = activeFrame?.variables || {};
 
-  const preferredNames = ['arr', 'numbers', 'user_data', 'a', 'nums', 'data', 'list'];
+  const preferredNames = [
+    'arr',
+    'numbers',
+    'user_data',
+    'a',
+    'nums',
+    'data',
+    'list',
+    'words',
+    'chars',
+    'characters',
+    'string_arr',
+    's',
+    'text',
+  ];
+
   for (const name of preferredNames) {
     const varVal = vars[name];
     if (varVal && varVal.ref_id) {
       const heapObj = step.heap_objects[varVal.ref_id];
-      if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-        const nums = heapObj.elements
-          .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-          .filter((n) => !isNaN(n));
-        if (nums.length > 0) return nums;
+      if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+        const items: ArraySnapshotItem[] = heapObj.elements
+          .map((el) => {
+            if (typeof el.value === 'number') return el.value;
+            if (typeof el.value === 'string') {
+              if (el.type === 'str') return el.value;
+              const n = parseFloat(el.value);
+              return !isNaN(n) ? n : el.value;
+            }
+            return null;
+          })
+          .filter((v): v is ArraySnapshotItem => v !== null);
+        if (items.length > 0) return items;
       }
     }
   }
 
   for (const [_, heapObj] of Object.entries(step.heap_objects)) {
-    if (heapObj && heapObj.type === 'list' && Array.isArray(heapObj.elements)) {
-      const nums = heapObj.elements
-        .map((el) => (typeof el.value === 'number' ? el.value : parseFloat(el.value)))
-        .filter((n) => !isNaN(n));
-      if (nums.length > 0) return nums;
+    if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
+      const items: ArraySnapshotItem[] = heapObj.elements
+        .map((el) => {
+          if (typeof el.value === 'number') return el.value;
+          if (typeof el.value === 'string') {
+            if (el.type === 'str') return el.value;
+            const n = parseFloat(el.value);
+            return !isNaN(n) ? n : el.value;
+          }
+          return null;
+        })
+        .filter((v): v is ArraySnapshotItem => v !== null);
+      if (items.length > 0) return items;
     }
   }
+
+  // Nếu không có mảng trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "PYTHON")
+  for (const name of preferredNames) {
+    const varVal = vars[name];
+    if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+      const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+      if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+        return rawStr.split('');
+      }
+    }
+  }
+
   return null;
 }
 
@@ -150,11 +195,16 @@ export function filterAlgorithmicSteps(rawSteps: TraceStep[], code: string): Fil
     const isComparisonLine =
       (lineContent.startsWith('if ') || lineContent.startsWith('while ') || lineContent.startsWith('elif ')) &&
       (lineContent.includes('arr[') ||
+        lineContent.includes('data[') ||
+        lineContent.includes('chars[') ||
+        lineContent.includes('words[') ||
         lineContent.includes('numbers[') ||
         lineContent.includes('key') ||
         lineContent.includes('min_idx') ||
         lineContent.includes('pivot') ||
+        lineContent.includes('mid_val') ||
         lineContent.includes('target') ||
+        lineContent.includes('can_tim') ||
         lineContent.includes('>') ||
         lineContent.includes('<') ||
         lineContent.includes('=='));

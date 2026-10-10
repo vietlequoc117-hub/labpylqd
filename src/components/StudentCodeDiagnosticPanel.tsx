@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   Info,
   Bug,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   PythonLintError,
@@ -28,7 +29,8 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
   onAutoFix,
   onSelectLine,
 }) => {
-  const { errors, warnings, infos, isValid, canAutoFix } = lintResult;
+  const { errors, warnings, infos, isValid, canAutoFix, stats } = lintResult;
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
 
   // Nếu có lỗi lúc chạy (Runtime Error)
   const runtimeDiagnostic = executionError
@@ -44,49 +46,31 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-medium">
-            Cú pháp chuẩn xác! Bạn có thể nhấn <strong>"Chạy & Trực Quan Hóa"</strong> bên dưới.
+            Cú pháp chuẩn xác! Bạn có thể nhấn <strong>"Chạy Chương Trình"</strong> để bắt đầu mô phỏng từng bước.
           </span>
         </div>
-        <span className="text-[10px] text-emerald-400/80 font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-          0 Lỗi
+        <span className="text-[10px] text-emerald-400/90 font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 font-bold">
+          0 Lỗi Cú Pháp
         </span>
       </div>
     );
   }
 
+  // Lọc lỗi theo danh mục
+  const filteredErrors = errors.filter((e) => {
+    if (activeCategoryFilter === 'all') return true;
+    return e.category === activeCategoryFilter;
+  });
+
   return (
-    <div className="bg-slate-900 border border-rose-500/40 rounded-xl overflow-hidden shadow-xl flex flex-col gap-2.5 p-3 text-xs">
+    <div className="bg-slate-900 border border-rose-500/50 rounded-xl overflow-hidden shadow-xl flex flex-col gap-2.5 p-3 text-xs">
       {/* Header bar */}
       <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2 text-rose-400 font-bold flex-wrap">
-          <div className="p-1 rounded-md bg-rose-500/20 border border-rose-500/30 text-rose-400">
-            <Bug className="w-4 h-4" />
+          <div className="p-1 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-400">
+            <ShieldAlert className="w-4 h-4" />
           </div>
-          <span>Phát hiện {totalIssues} vấn đề:</span>
-
-          {/* Breakdown tags */}
-          <div className="flex items-center gap-1.5 text-[10px]">
-            {lintResult.stats?.symbolErrors > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                {lintResult.stats.symbolErrors} thiếu dấu
-              </span>
-            )}
-            {lintResult.stats?.keywordErrors > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                {lintResult.stats.keywordErrors} từ khóa
-              </span>
-            )}
-            {lintResult.stats?.syntaxErrors > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {lintResult.stats.syntaxErrors} cú pháp
-              </span>
-            )}
-            {lintResult.stats?.semanticErrors > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
-                {lintResult.stats.semanticErrors} ngữ nghĩa
-              </span>
-            )}
-          </div>
+          <span>Chuyên gia Python: Phát hiện {totalIssues} vấn đề cần sửa</span>
         </div>
 
         {canAutoFix && onAutoFix && (
@@ -101,9 +85,75 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
         )}
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+        <button
+          onClick={() => setActiveCategoryFilter('all')}
+          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+            activeCategoryFilter === 'all'
+              ? 'bg-slate-700 text-white font-bold ring-1 ring-slate-500'
+              : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+          }`}
+        >
+          Tất cả ({totalIssues})
+        </button>
+
+        {stats.syntaxErrors > 0 && (
+          <button
+            onClick={() => setActiveCategoryFilter('syntax')}
+            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+              activeCategoryFilter === 'syntax'
+                ? 'bg-rose-600 text-white font-bold ring-1 ring-rose-400'
+                : 'text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/50'
+            }`}
+          >
+            Cú pháp & Thụt lề ({stats.syntaxErrors})
+          </button>
+        )}
+
+        {stats.semanticErrors > 0 && (
+          <button
+            onClick={() => setActiveCategoryFilter('semantics')}
+            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+              activeCategoryFilter === 'semantics'
+                ? 'bg-red-600 text-white font-bold ring-1 ring-red-400'
+                : 'text-red-300 bg-red-950/40 border border-red-500/30 hover:bg-red-900/50'
+            }`}
+          >
+            Ngữ nghĩa & Logic ({stats.semanticErrors})
+          </button>
+        )}
+
+        {stats.symbolErrors > 0 && (
+          <button
+            onClick={() => setActiveCategoryFilter('symbol')}
+            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+              activeCategoryFilter === 'symbol'
+                ? 'bg-purple-600 text-white font-bold ring-1 ring-purple-400'
+                : 'text-purple-300 bg-purple-950/40 border border-purple-500/30 hover:bg-purple-900/50'
+            }`}
+          >
+            Thiếu dấu & Ngoặc ({stats.symbolErrors})
+          </button>
+        )}
+
+        {stats.keywordErrors > 0 && (
+          <button
+            onClick={() => setActiveCategoryFilter('keyword')}
+            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+              activeCategoryFilter === 'keyword'
+                ? 'bg-orange-600 text-white font-bold ring-1 ring-orange-400'
+                : 'text-orange-300 bg-orange-950/40 border border-orange-500/30 hover:bg-orange-900/50'
+            }`}
+          >
+            Từ khóa & Chính tả ({stats.keywordErrors})
+          </button>
+        )}
+      </div>
+
       {/* Runtime Execution Error if occurred */}
       {runtimeDiagnostic && (
-        <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-500/50 space-y-1.5">
+        <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-500/50 space-y-1.5 shadow-md">
           <div className="flex items-center justify-between text-rose-200 font-bold">
             <span className="flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -114,7 +164,7 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
                 onClick={() => onSelectLine && onSelectLine(runtimeDiagnostic.line!)}
                 className="text-[11px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 cursor-pointer hover:bg-rose-500/40"
               >
-                Tại Dòng {runtimeDiagnostic.line}
+                Nhảy tới Dòng {runtimeDiagnostic.line}
               </span>
             )}
           </div>
@@ -129,17 +179,17 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
       )}
 
       {/* Syntax Errors List */}
-      <div className="space-y-2">
-        {errors.map((err) => (
+      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+        {filteredErrors.map((err) => (
           <div
             key={err.id}
-            className="p-2.5 rounded-lg bg-slate-950/90 border border-rose-500/30 flex items-start justify-between gap-2.5"
+            className="p-2.5 rounded-lg bg-slate-950/90 border border-rose-500/30 flex items-start justify-between gap-2.5 hover:border-rose-400/60 transition-all"
           >
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span
                   onClick={() => onSelectLine && onSelectLine(err.line)}
-                  className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 cursor-pointer hover:bg-rose-500/30"
+                  className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 cursor-pointer hover:bg-rose-500/40"
                   title="Nhấn để nhảy tới dòng này"
                 >
                   Dòng {err.line}
@@ -157,7 +207,7 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
                 )}
                 {err.category === 'syntax' && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 font-medium">
-                    Cú pháp
+                    Cú pháp & Thụt lề
                   </span>
                 )}
                 {err.category === 'semantics' && (
@@ -219,7 +269,7 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
           </div>
         ))}
 
-        {/* Infos List (e.g. missing print) */}
+        {/* Infos List */}
         {infos.map((inf) => (
           <div
             key={inf.id}

@@ -59,17 +59,37 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   // Mặc định luôn mở Dữ liệu đầu vào chuẩn nếu code có input() hoặc stdinInput có dữ liệu
   const [showStdin, setShowStdin] = useState<boolean>(true);
 
-  // Phân tích mảng số từ chuỗi stdin để hiển thị preview trực quan
-  const parsedNumbersPreview = useMemo(() => {
+  // Phân tích dữ liệu từ chuỗi stdin (mảng số, xâu kí tự, hoặc danh sách từ) để hiển thị preview
+  const parsedDataPreview = useMemo(() => {
     if (!stdinInput || !stdinInput.trim()) return null;
-    const nums = stdinInput
-      .replace(/,/g, ' ')
-      .split(/\s+/)
-      .map((x) => x.trim())
-      .filter(Boolean)
-      .map(Number)
-      .filter((n) => !isNaN(n));
-    return nums.length > 0 ? nums : null;
+    const cleanStr = stdinInput.trim();
+    const parts = cleanStr.replace(/,/g, ' ').split(/\s+/).map((x) => x.trim()).filter(Boolean);
+    if (parts.length === 0) return null;
+
+    const isAllNumbers = parts.every((p) => !isNaN(Number(p)));
+    if (isAllNumbers) {
+      return {
+        type: 'numbers' as const,
+        label: `Mảng số: [${parts.join(', ')}] (${parts.length} số)`,
+        preview: parts.join(', '),
+      };
+    }
+
+    if (parts.length > 1) {
+      return {
+        type: 'strings' as const,
+        label: `Mảng kí tự / từ: [${parts.map((p) => `'${p}'`).join(', ')}] (${parts.length} phần tử)`,
+        preview: parts.map((p) => `'${p}'`).join(', '),
+      };
+    }
+
+    // Xâu kí tự liền nhau (ví dụ: 'PYTHON', 'ALGORITHM')
+    const chars = cleanStr.split('');
+    return {
+      type: 'chars' as const,
+      label: `Xâu kí tự: [${chars.map((c) => `'${c}'`).join(', ')}] (${chars.length} kí tự)`,
+      preview: chars.map((c) => `'${c}'`).join(', '),
+    };
   }, [stdinInput]);
 
   // Auto-open stdin panel if code calls input() and stdin is empty
@@ -246,7 +266,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
       </div>
 
-      {/* Stdin Drawer Panel: Dữ liệu đầu vào chuẩn */}
+      {/* Stdin Drawer Panel: Dữ liệu đầu vào chuẩn (Hỗ trợ Mảng số, Xâu kí tự & Từ vựng) */}
       {showStdin && (
         <div className="bg-slate-950/95 border-b border-sky-900/50 p-3 transition-all text-xs flex flex-col gap-2.5 shadow-inner">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -258,16 +278,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 <span className="text-sky-300 font-bold text-xs">
                   Dữ liệu đầu vào chuẩn (Standard Input / stdin):
                 </span>
-                <p className="text-[10px] text-slate-400">
-                  Nhập mảng số (các số cách nhau bằng dấu cách hoặc dấu phẩy để kiểm tra thuật toán)
-                </p>
               </div>
             </div>
 
-            {parsedNumbersPreview && (
+            {parsedDataPreview && (
               <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-500/40 shadow-sm flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Mảng nhận diện: [{parsedNumbersPreview.join(', ')}] ({parsedNumbersPreview.length} số)</span>
+                <span>{parsedDataPreview.label}</span>
               </span>
             )}
           </div>
@@ -284,7 +301,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                   onRunCode?.();
                 }
               }}
-              placeholder="Nhập mảng số (Ví dụ: 12 11 13 5 6 hoặc 12, 11, 13, 5, 6)"
+              placeholder="Nhập mảng số (5 2 8 1 3) hoặc xâu kí tự (P Y T H O N hoặc ALGORITHM)..."
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-inner"
             />
           </div>

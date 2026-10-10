@@ -26,6 +26,7 @@ import { TerminalOutput } from './components/TerminalOutput';
 import { ComplexityMatrixTable } from './components/ComplexityMatrixTable';
 import { ArrayBarVisualizer } from './components/ArrayBarVisualizer';
 import { AlgorithmQuiz } from './components/AlgorithmQuiz';
+import { HighSchoolAITutor } from './components/HighSchoolAITutor';
 
 import { PRESETS } from './presets';
 import { TraceStep, TraceResult, ComplexityReport } from './types';
@@ -89,7 +90,7 @@ export default function App() {
   const [finalStdout, setFinalStdout] = useState<string>('');
 
   // UI state: defaults to Array Bar Chart matching user request!
-  const [activeTab, setActiveTab] = useState<'barchart' | 'variables' | 'algorithm' | 'quiz' | 'complexity'>('barchart');
+  const [activeTab, setActiveTab] = useState<'barchart' | 'variables' | 'algorithm' | 'quiz' | 'complexity' | 'ai-tutor'>('barchart');
 
   const currentPreset = PRESETS.find((p) => p.id === selectedPresetId);
 
@@ -329,7 +330,7 @@ export default function App() {
                   }`}
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
-                  <span>Biểu Đồ Cột (Như Hình)</span>
+                  <span>Biểu Đồ Cột</span>
                   <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Trực quan)</span>
                 </button>
 
@@ -368,7 +369,7 @@ export default function App() {
                   }`}
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Trắc Nghiệm (tt.pdf)</span>
+                  <span>Trắc Nghiệm</span>
                   <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Ngẫu nhiên)</span>
                 </button>
 
@@ -387,6 +388,19 @@ export default function App() {
                       {complexityReport.timeComplexity}
                     </span>
                   )}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('ai-tutor')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    activeTab === 'ai-tutor'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-300 font-bold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                  <span>Trợ Lí AI (THPT)</span>
+                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Dễ hiểu)</span>
                 </button>
               </div>
             </div>
@@ -489,6 +503,18 @@ export default function App() {
                   )}
                 </div>
               )}
+
+              {activeTab === 'ai-tutor' && (
+                <HighSchoolAITutor
+                  algorithmId={selectedPresetId}
+                  algorithmTitle={selectedPresetId === 'custom-code' ? 'Bài toán tự nhập của bạn' : currentPreset?.title}
+                  code={code}
+                  currentStep={currentStep}
+                  currentStepIndex={currentStepIndex}
+                  totalSteps={steps.length}
+                  stdinInput={stdinInput}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -497,11 +523,11 @@ export default function App() {
       {/* Footer Info */}
       <footer className="border-t border-slate-900 bg-slate-950 py-3 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>PyViz Lab &bull; Trực quan hóa thuật toán và theo dõi biến Python cho học sinh</p>
+          <p>LQD_PYTHON_LAB &bull; Phòng thực hành ảo Python &amp; Trợ lí AI Tin học THPT</p>
           <div className="flex items-center gap-4 text-[11px] text-slate-400">
-            <span>Theo dõi biến</span>
+            <span>Trợ lí AI Sư phạm</span>
             <span>&bull;</span>
-            <span>Thuật toán Tiếng Việt</span>
+            <span>Trực quan hóa thuật toán</span>
             <span>&bull;</span>
             <span>Độ phức tạp Big-O</span>
           </div>
