@@ -32,14 +32,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-base md:text-lg text-slate-100 tracking-tight font-mono">
-                LAB_PYTHON
+                LQD_PYTHON_LAB
               </h1>
-              <span className="text-[11px] font-medium text-emerald-400 hidden sm:inline">
-                · Dành cho học sinh THPT
-              </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden md:block">
-              Quan sát máy tính chạy từng dòng lệnh và thay đổi giá trị các biến
+              Phòng thực hành ảo Python
             </p>
           </div>
         </div>
