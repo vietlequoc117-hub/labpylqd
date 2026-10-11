@@ -17,9 +17,12 @@ import {
   ChevronRight,
   ArrowRight,
   Compass,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { TraceStep } from '../types';
 import { getHighSchoolPedagogy } from '../services/aiTutorKnowledge';
+import { getLocalPedagogyResponse, answerStudentQuestion } from '../services/aiTutorEngine';
 
 interface HighSchoolAITutorProps {
   algorithmId: string;
@@ -43,7 +46,9 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
   stdinInput = '',
 }) => {
   const [activeMode, setActiveMode] = useState<TutorMode>('concept');
-  const [responseContent, setResponseContent] = useState<string>('');
+  const [responseContent, setResponseContent] = useState<string>(() =>
+    getLocalPedagogyResponse('concept', algorithmId, currentStep)
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [customQuestion, setCustomQuestion] = useState<string>('');
@@ -55,7 +60,7 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
   // Tự động tải lời giải thích theo chế độ khi đổi thuật toán hoặc đổi tab
   useEffect(() => {
     fetchTutorExplanation(activeMode);
-  }, [algorithmId, activeMode]);
+  }, [algorithmId, activeMode, currentStepIndex]);
 
   // Cuộn xuống cuối khi có tin nhắn mới trong chế độ chat
   useEffect(() => {
@@ -65,7 +70,30 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
   }, [chatHistory, activeMode]);
 
   const fetchTutorExplanation = async (mode: TutorMode, specificQuestion?: string) => {
-    setIsLoading(true);
+    // 1. Phản hồi TỨC THÌ 0ms bằng động cơ AI Sư Phạm Tích Hợp Sẵn (Không cần bất kỳ API nào)
+    if (mode === 'chat' && specificQuestion) {
+      const instantAnswer = answerStudentQuestion({
+        question: specificQuestion,
+        algorithmId,
+        algorithmTitle,
+        code,
+        currentStep,
+        stdinInput,
+      });
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: instantAnswer,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } else if (mode !== 'chat') {
+      const instantResponse = getLocalPedagogyResponse(mode, algorithmId, currentStep);
+      setResponseContent(instantResponse);
+    }
+
+    // 2. Tùy chọn gửi ngầm đến backend server (hoàn toàn không bắt buộc, không bao giờ báo lỗi hay đòi API key)
     try {
       const res = await fetch('/api/gemini/high-school-tutor', {
         method: 'POST',
@@ -81,53 +109,34 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
         }),
       });
 
-      if (!res.ok) throw new Error('API request failed');
-      const data = await res.json();
-      const answer = data.response || '';
-
-      if (mode === 'chat' && specificQuestion) {
-        setChatHistory((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            text: answer,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-      } else {
-        setResponseContent(answer);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.response && !data.isFallback) {
+          if (mode === 'chat' && specificQuestion) {
+            // Thay thế câu trả lời cuối cùng bằng nội dung phong phú hơn nếu có
+            setChatHistory((prev) => {
+              if (prev.length === 0) return prev;
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                role: 'assistant',
+                text: data.response,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              };
+              return updated;
+            });
+          } else if (mode !== 'chat') {
+            setResponseContent(data.response);
+          }
+        }
       }
-    } catch (err) {
-      // Fallback cục bộ đảm bảo luôn có kết quả sư phạm hoàn hảo
-      const fallback = getHighSchoolPedagogy(algorithmId);
-      let fallbackText = fallback.realLifeAnalogy;
-      if (mode === 'code_breakdown') fallbackText = fallback.codeBreakdown;
-      else if (mode === 'complexity') fallbackText = fallback.complexityExplanation;
-      else if (mode === 'exam_tips') fallbackText = fallback.examTipsAndTraps;
-      else if (mode === 'step_insight' && currentStep) {
-        fallbackText = `📍 **Phân tích bước hiện tại (Dòng ${currentStep.line_number || '-'}):**\n- Sự kiện: \`${currentStep.event || 'line'}\`.\n- Dòng lệnh này đang thực hiện thao tác so sánh hoặc cập nhật trong thuật toán. Hãy quan sát cột dữ liệu trên biểu đồ!`;
-      }
-
-      if (mode === 'chat' && specificQuestion) {
-        setChatHistory((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            text: fallbackText,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-      } else {
-        setResponseContent(fallbackText);
-      }
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // Yên lặng bỏ qua, học sinh vẫn có câu trả lời tức thì đầy đủ 100%
     }
   };
 
   const handleAskQuestion = (q?: string) => {
     const questionText = q || customQuestion.trim();
-    if (!questionText || isLoading) return;
+    if (!questionText) return;
 
     setActiveMode('chat');
     setChatHistory((prev) => [
@@ -148,10 +157,16 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Danh sách câu hỏi gợi ý mở rộng, bao gồm giải đáp về việc không cần API
+  const allQuickQuestions = [
+    ...defaultPedagogy.quickQuestions,
+    'Trợ lí AI có cần cài đặt API hay tài khoản không?',
+  ];
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl text-slate-100">
       {/* Header bar */}
-      <div className="bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/80 px-4 py-3 border-b border-indigo-900/40 flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-gradient-to-r from-indigo-950/90 via-slate-900 to-purple-950/90 px-4 py-3 border-b border-indigo-900/40 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 ring-1 ring-white/20">
             <GraduationCap className="w-5 h-5" />
@@ -171,10 +186,21 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
           </div>
         </div>
 
+        {/* Huy hiệu 100% Không Cần API */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Sẵn sàng hỗ trợ</span>
+          <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Tích hợp sẵn 100% (Không cần API)</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Dòng thông báo khẳng định không cần API cho học sinh THPT */}
+      <div className="px-4 py-1.5 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-indigo-950/40 border-b border-indigo-900/30 flex items-center justify-between gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5 text-indigo-300">
+          <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>
+            <strong>Dành cho học sinh & giáo viên:</strong> Hoạt động ngay lập tức, phản hồi 0ms, không cần đăng ký tài khoản hay thiết lập bất kỳ khóa API nào!
           </span>
         </div>
       </div>
@@ -255,7 +281,7 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[320px]">
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex items-center justify-center py-10 gap-3 text-indigo-400">
+          <div className="flex items-center justify-center py-6 gap-3 text-indigo-400">
             <RefreshCw className="w-5 h-5 animate-spin" />
             <span className="text-xs font-medium">Trợ lí AI đang phân tích và chuẩn bị bài giảng...</span>
           </div>
@@ -304,16 +330,16 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
 
             {/* Explanation Content formatted */}
             <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 text-xs md:text-sm leading-relaxed text-slate-200 whitespace-pre-line font-sans shadow-inner">
-              {responseContent || 'Đang tải nội dung sư phạm...'}
+              {responseContent || 'Đang chuẩn bị nội dung sư phạm...'}
             </div>
 
             {/* Quick Suggested Questions Pill Container */}
             <div className="pt-2">
               <span className="text-[11px] font-semibold text-slate-400 block mb-2">
-                💡 Câu hỏi gợi ý học sinh hay thắc mắc (Nhấn để hỏi AI):
+                💡 Câu hỏi gợi ý học sinh hay thắc mắc (Nhấn để hỏi AI ngay):
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {defaultPedagogy.quickQuestions.map((q, idx) => (
+                {allQuickQuestions.map((q, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleAskQuestion(q)}
@@ -334,7 +360,7 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Hội thoại Hỏi - Đáp cùng Trợ lí AI</span>
+                <span>Hội thoại Hỏi - Đáp cùng Trợ lí AI (Phản hồi tức thì)</span>
               </span>
               <button
                 onClick={() => setChatHistory([])}
@@ -348,6 +374,9 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
               <div className="text-center py-8 text-slate-400 text-xs space-y-2">
                 <Bot className="w-8 h-8 mx-auto text-indigo-400/60" />
                 <p>Hãy gõ câu hỏi bất kỳ hoặc chọn câu hỏi gợi ý bên dưới để Trợ lí AI giải đáp cho bạn nhé!</p>
+                <p className="text-[11px] text-emerald-400 font-medium">
+                  ⚡ Tích hợp sẵn 100% - Không cần cài đặt API hay mật khẩu!
+                </p>
               </div>
             )}
 

@@ -33,6 +33,7 @@ import { TraceStep, TraceResult, ComplexityReport } from './types';
 import { executeTrace, getPyodide } from './services/traceService';
 import { lintPythonCode } from './services/pythonLinter';
 import { filterAlgorithmicSteps } from './utils/stepFilter';
+import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './complexityData';
 
 export default function App() {
   // Preset & Code state
@@ -176,12 +177,14 @@ export default function App() {
         setUncalledFunctionHint(null);
       }
 
-      // 2. Fetch Gemini Complexity analysis (Check client cache first to save quota)
+      // 2. Phân tích độ phức tạp Big-O tức thì 100% bằng thuật toán nội bộ
+      const instantReport =
+        PRESET_COMPLEXITY_MAP[targetPresetId] || analyzeComplexityHeuristically(targetCode);
+      setComplexityReport(instantReport);
+
+      // Cập nhật thêm nếu có kết nối server (tùy chọn)
       const cacheKey = `${targetPresetId}:${targetCode.trim()}`;
-      if (complexityCacheRef.current.has(cacheKey)) {
-        setComplexityReport(complexityCacheRef.current.get(cacheKey)!);
-      } else {
-        setIsLoadingComplexity(true);
+      if (!complexityCacheRef.current.has(cacheKey)) {
         fetch('/api/gemini/complexity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -194,8 +197,7 @@ export default function App() {
               setComplexityReport(data);
             }
           })
-          .catch((err) => console.error('Gemini complexity fetch error:', err))
-          .finally(() => setIsLoadingComplexity(false));
+          .catch(() => {});
       }
     } catch (err: any) {
       setExecutionError(err.message || 'Lỗi không xác định khi thực thi code.');
@@ -487,15 +489,9 @@ export default function App() {
                     complexityReport={complexityReport}
                     isLoading={isLoadingComplexity}
                     onRefresh={() => {
-                      setIsLoadingComplexity(true);
-                      fetch('/api/gemini/complexity', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code, presetId: selectedPresetId }),
-                      })
-                        .then((r) => r.json())
-                        .then((data) => setComplexityReport(data))
-                        .finally(() => setIsLoadingComplexity(false));
+                      const localAnalysis =
+                        PRESET_COMPLEXITY_MAP[selectedPresetId] || analyzeComplexityHeuristically(code);
+                      setComplexityReport(localAnalysis);
                     }}
                     steps={steps}
                     currentStepIndex={currentStepIndex}

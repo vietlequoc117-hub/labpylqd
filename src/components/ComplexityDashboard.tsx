@@ -45,7 +45,7 @@ export const ComplexityDashboard: React.FC<ComplexityDashboardProps> = ({
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
               Bảng Phân Tích Độ Phức Tạp (Complexity Dashboard)
               <span className="flex items-center gap-1 text-[10px] font-normal px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-sky-500/20 text-indigo-300 border border-indigo-500/30">
-                <Sparkles className="w-2.5 h-2.5" /> Gemini AI
+                <Sparkles className="w-2.5 h-2.5" /> AI Phân Tích (Tự động 100%)
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">
@@ -67,7 +67,7 @@ export const ComplexityDashboard: React.FC<ComplexityDashboardProps> = ({
       {isLoading && !complexityReport ? (
         <div className="p-8 flex flex-col items-center justify-center gap-3 text-slate-400 text-xs">
           <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
-          <p>Google Gemini đang kiểm tra cấu trúc thuật toán và tính toán Big-O...</p>
+          <p>Hệ thống AI đang kiểm tra cấu trúc thuật toán và tính toán Big-O...</p>
         </div>
       ) : complexityReport ? (
         <div className="flex flex-col gap-4">

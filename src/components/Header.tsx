@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenAiTutor && (
             <button
               onClick={onOpenAiTutor}
-              title="Mở Trợ Lí AI chuyên biệt giải thích thuật toán cho học sinh cấp THPT"
+              title="Mở Trợ Lí AI chuyên biệt giải thích thuật toán cho học sinh cấp THPT (Tích hợp sẵn 100%, không cần cài đặt API)"
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md ${
                 isAiTutorActive
                   ? 'bg-purple-600 text-white shadow-purple-600/40 ring-2 ring-purple-300'
@@ -102,7 +102,9 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
               <span>Trợ Lí AI (THPT)</span>
-              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Dễ hiểu)</span>
+              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-950/70 border border-emerald-500/30 px-1.5 py-0.2 rounded hidden sm:inline">
+                Sẵn sàng
+              </span>
             </button>
           )}
         </div>
