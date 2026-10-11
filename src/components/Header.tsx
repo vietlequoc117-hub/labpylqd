@@ -10,6 +10,8 @@ interface HeaderProps {
   engine: 'auto' | 'pyodide' | 'backend';
   onChangeEngine: (engine: 'auto' | 'pyodide' | 'backend') => void;
   pyodideReady: boolean;
+  onOpenAiTutor?: () => void;
+  isAiTutorActive?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   engine,
   onChangeEngine,
   pyodideReady,
+  onOpenAiTutor,
+  isAiTutorActive,
 }) => {
   return (
     <header className="border-b border-slate-800 bg-slate-900/95 sticky top-0 z-30 px-4 py-2.5 shadow-md">
@@ -64,8 +68,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: Large Run Button */}
-        <div className="flex items-center gap-3">
+        {/* Right Actions: Large Run Button & AI Tutor Button */}
+        <div className="flex items-center gap-2.5">
           <button
             onClick={onRunCode}
             disabled={isRunning}
@@ -84,6 +88,23 @@ export const Header: React.FC<HeaderProps> = ({
               </>
             )}
           </button>
+
+          {/* Nút Trợ Lí AI (THPT) ngay đằng sau nút Chạy Chương Trình */}
+          {onOpenAiTutor && (
+            <button
+              onClick={onOpenAiTutor}
+              title="Mở Trợ Lí AI chuyên biệt giải thích thuật toán cho học sinh cấp THPT"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md ${
+                isAiTutorActive
+                  ? 'bg-purple-600 text-white shadow-purple-600/40 ring-2 ring-purple-300'
+                  : 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border border-purple-500/50 hover:border-purple-400'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>Trợ Lí AI (THPT)</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Dễ hiểu)</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

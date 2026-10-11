@@ -283,6 +283,8 @@ export default function App() {
         engine={engine}
         onChangeEngine={setEngine}
         pyodideReady={pyodideReady}
+        onOpenAiTutor={() => setActiveTab('ai-tutor')}
+        isAiTutorActive={activeTab === 'ai-tutor'}
       />
 
       {/* Main Workspace Area */}
