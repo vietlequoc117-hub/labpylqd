@@ -110,18 +110,18 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
   return (
     <div className="flex flex-col gap-4 max-w-5xl mx-auto p-1">
       {/* Top Banner / Toolbar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
             <HelpCircle className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-bold text-base text-slate-100">
+              <h2 className="font-bold text-base text-slate-900">
                 Trắc Nghiệm Kiến Thức Thuật Toán
               </h2>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Tự động sinh câu hỏi với <strong>dữ liệu 6 - 12 số</strong> và <strong>lượt lặp ngẫu nhiên</strong> kèm lời giải chi tiết.
             </p>
           </div>
@@ -130,12 +130,12 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
         {/* Stats & Actions */}
         <div className="flex items-center gap-2 flex-wrap">
           {scoreStats.total > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono">
-              <Award className="w-4 h-4 text-amber-400" />
-              <span className="text-slate-400">Đúng:</span>
-              <span className="font-bold text-emerald-400">{scoreStats.correct}</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-slate-200">{scoreStats.total}</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
+              <Award className="w-4 h-4 text-amber-500" />
+              <span className="text-slate-500">Đúng:</span>
+              <span className="font-bold text-emerald-600">{scoreStats.correct}</span>
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-800 font-semibold">{scoreStats.total}</span>
               <span className="text-[11px] text-slate-500">
                 ({Math.round((scoreStats.correct / scoreStats.total) * 100)}%)
               </span>
@@ -144,7 +144,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
 
           <button
             onClick={() => handleNewQuestion()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shadow-md shadow-amber-600/20 cursor-pointer transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shadow-xs cursor-pointer transition-all"
             title="Tạo mảng và lượt lặp ngẫu nhiên mới"
           >
             <Sparkles className="w-4 h-4" />
@@ -155,7 +155,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
 
       {/* Algorithm Selector Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        <span className="text-xs text-slate-400 font-medium whitespace-nowrap mr-1">
+        <span className="text-xs text-slate-500 font-medium whitespace-nowrap mr-1">
           Thuật toán kiểm tra:
         </span>
         <button
@@ -165,8 +165,8 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
             selectedAlgo === 'bubble-sort'
-              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
         >
           1. Bubble Sort (Nổi bọt)
@@ -178,8 +178,8 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
             selectedAlgo === 'selection-sort'
-              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
         >
           2. Selection Sort (Chọn)
@@ -191,8 +191,8 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
             selectedAlgo === 'insertion-sort'
-              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
         >
           3. Insertion Sort (Chèn)
@@ -204,8 +204,8 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
             selectedAlgo === 'quick-sort'
-              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
         >
           4. Quick Sort (Nhanh)
@@ -217,8 +217,8 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           }}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
             selectedAlgo === 'merge-sort'
-              ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
         >
           5. Merge Sort (Trộn)
@@ -226,21 +226,21 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
       </div>
 
       {/* Main Question Card (Định dạng như trong tt.pdf) */}
-      <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col gap-5 text-slate-800">
         {/* Question Header & Level Badge */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 Thuật toán: {currentQuestion.algorithmName}
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                   currentQuestion.level === 'Nhận biết'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                     : currentQuestion.level === 'Thông hiểu'
-                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                    : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                    ? 'bg-sky-50 text-sky-800 border-sky-200'
+                    : 'bg-purple-50 text-purple-800 border-purple-200'
                 }`}
               >
                 Mức độ: {currentQuestion.level}
@@ -251,7 +251,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
             </div>
 
             {/* Nội dung câu hỏi đúng chuẩn file tt.pdf */}
-            <h3 className="text-base sm:text-lg font-bold text-slate-100 font-sans tracking-wide leading-relaxed pt-1">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 font-sans tracking-wide leading-relaxed pt-1">
               {currentQuestion.questionText}
             </h3>
           </div>
@@ -259,10 +259,10 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           {/* Nút Copy câu hỏi & giải thích */}
           <button
             onClick={handleCopyFormattedText}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer transition-colors border border-slate-700 whitespace-nowrap shadow-xs"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-medium cursor-pointer transition-colors border border-slate-200 whitespace-nowrap shadow-2xs"
             title="Sao chép nội dung câu hỏi và lời giải định dạng chuẩn đề thi"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Đã sao chép' : 'Sao chép đề'}</span>
           </button>
         </div>
@@ -274,20 +274,20 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
             const isCorrect = opt.isCorrect;
 
             let cardStyle =
-              'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 text-slate-200';
-            let badgeStyle = 'bg-slate-800 text-slate-300 border-slate-700';
+              'bg-slate-50/80 border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-800';
+            let badgeStyle = 'bg-white text-slate-700 border-slate-200';
 
             if (isAnswered) {
               if (isCorrect) {
                 cardStyle =
-                  'bg-emerald-950/50 border-emerald-500 text-emerald-200 ring-1 ring-emerald-500/50 shadow-md shadow-emerald-900/20';
+                  'bg-emerald-50 border-emerald-400 text-emerald-950 ring-1 ring-emerald-400 shadow-xs';
                 badgeStyle = 'bg-emerald-600 text-white border-emerald-500';
               } else if (isSelected) {
                 cardStyle =
-                  'bg-rose-950/50 border-rose-500 text-rose-200 ring-1 ring-rose-500/50 shadow-md shadow-rose-900/20';
+                  'bg-rose-50 border-rose-400 text-rose-950 ring-1 ring-rose-400 shadow-xs';
                 badgeStyle = 'bg-rose-600 text-white border-rose-500';
               } else {
-                cardStyle = 'bg-slate-950/40 border-slate-900 opacity-60 text-slate-400';
+                cardStyle = 'bg-slate-50/40 border-slate-200 opacity-60 text-slate-400';
               }
             }
 
@@ -301,7 +301,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs font-mono border shadow-sm ${badgeStyle}`}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs font-mono border shadow-2xs ${badgeStyle}`}
                   >
                     {opt.key}
                   </span>
@@ -314,14 +314,14 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
                 {isAnswered && (
                   <div>
                     {isCorrect && (
-                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-400">
-                        <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-slate-950" />
+                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-700">
+                        <CheckCircle2 className="w-4 h-4 fill-emerald-600 text-white" />
                         <span className="hidden sm:inline">Đáp án đúng</span>
                       </span>
                     )}
                     {isSelected && !isCorrect && (
-                      <span className="flex items-center gap-1 text-xs font-bold text-rose-400">
-                        <XCircle className="w-4 h-4 fill-rose-500 text-slate-950" />
+                      <span className="flex items-center gap-1 text-xs font-bold text-rose-700">
+                        <XCircle className="w-4 h-4 fill-rose-600 text-white" />
                         <span className="hidden sm:inline">Chưa chính xác</span>
                       </span>
                     )}
@@ -337,15 +337,15 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
           <div
             className={`p-3 rounded-xl border flex items-center justify-between flex-wrap gap-2 ${
               isCorrectAnswer
-                ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
-                : 'bg-rose-950/40 border-rose-800 text-rose-300'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
             }`}
           >
             <div className="flex items-center gap-2">
               {isCorrectAnswer ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               ) : (
-                <XCircle className="w-5 h-5 text-rose-400" />
+                <XCircle className="w-5 h-5 text-rose-600" />
               )}
               <span className="text-xs sm:text-sm font-bold">
                 {isCorrectAnswer
@@ -359,7 +359,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
                 <button
                   type="button"
                   onClick={() => onLoadArrayToVisualizer(currentQuestion.originalArray)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold cursor-pointer transition-all shadow-sm"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
                   title="Nạp mảng này vào Biểu đồ cột để xem mô phỏng từng bước"
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
@@ -370,7 +370,7 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
               <button
                 type="button"
                 onClick={() => handleNewQuestion()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer transition-all border border-slate-700"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold cursor-pointer transition-all"
               >
                 <span>Câu tiếp theo</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -381,17 +381,17 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
 
         {/* Khối Giải Thích (Đúng 100% văn phong & cấu trúc file tt.pdf) */}
         {showExplanation && (
-          <div className="mt-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 shadow-inner">
+          <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3 shadow-2xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
-                <BookOpen className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-amber-800 font-bold text-xs">
+                <BookOpen className="w-4 h-4 text-amber-600" />
                 <span>Giải thích chi tiết (Chuẩn đề thi):</span>
               </div>
             </div>
 
             {/* Đoạn văn giải thích nguyên văn chuẩn tt.pdf */}
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans bg-slate-900/60 p-3 rounded-lg border border-slate-800/80">
-              <strong className="text-amber-300 font-semibold">
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-sans bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+              <strong className="text-amber-800 font-semibold">
                 Giải thích ({currentQuestion.level}):{' '}
               </strong>
               {currentQuestion.fullExplanation.replace(/^Giải thích \([^)]+\):\s*/, '')}
@@ -399,13 +399,13 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
 
             {/* Bảng tiến trình qua các lượt để học sinh dễ đối chiếu */}
             <div className="flex flex-col gap-1.5 pt-1">
-              <span className="text-[11px] font-semibold text-slate-400">
+              <span className="text-[11px] font-semibold text-slate-600">
                 Bảng đối chiếu trạng thái mảng sau từng lượt ngoài (for i):
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs flex flex-col gap-0.5">
-                  <span className="text-[10px] text-slate-400 font-semibold">Dãy ban đầu:</span>
-                  <span className="font-mono text-slate-200 font-bold">
+                <div className="p-2 rounded-lg bg-white border border-slate-200 text-xs flex flex-col gap-0.5 shadow-2xs">
+                  <span className="text-[10px] text-slate-500 font-semibold">Dãy ban đầu:</span>
+                  <span className="font-mono text-slate-900 font-bold">
                     [{currentQuestion.originalArray.join(', ')}]
                   </span>
                 </div>
@@ -415,22 +415,22 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
                   return (
                     <div
                       key={h.pass}
-                      className={`p-2 rounded-lg border text-xs flex flex-col gap-0.5 ${
+                      className={`p-2 rounded-lg border text-xs flex flex-col gap-0.5 shadow-2xs ${
                         isTargetPass
-                          ? 'bg-emerald-950/40 border-emerald-500/60 ring-1 ring-emerald-500/40'
-                          : 'bg-slate-900 border-slate-800'
+                          ? 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-300'
+                          : 'bg-white border-slate-200'
                       }`}
                     >
                       <span
                         className={`text-[10px] font-bold ${
-                          isTargetPass ? 'text-emerald-400' : 'text-slate-400'
+                          isTargetPass ? 'text-emerald-800' : 'text-slate-500'
                         }`}
                       >
                         Sau lượt {h.pass} {isTargetPass ? '⭐ (Đáp án hỏi)' : ''}:
                       </span>
                       <span
                         className={`font-mono font-bold ${
-                          isTargetPass ? 'text-emerald-300 font-extrabold' : 'text-slate-300'
+                          isTargetPass ? 'text-emerald-900 font-extrabold' : 'text-slate-800'
                         }`}
                       >
                         [{h.array.join(', ')}]
@@ -445,9 +445,9 @@ export const AlgorithmQuiz: React.FC<AlgorithmQuizProps> = ({
       </div>
 
       {/* Thông tin tham khảo */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-500 flex items-center justify-between flex-wrap gap-2 shadow-2xs">
         <div className="flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5 text-sky-400" />
+          <FileText className="w-3.5 h-3.5 text-sky-600" />
           <span>
             Các câu hỏi được thiết kế chuẩn theo ma trận đề thi trắc nghiệm Chuyên đề Thuật toán Tin học (Nhận biết &bull; Thông hiểu &bull; Vận dụng).
           </span>

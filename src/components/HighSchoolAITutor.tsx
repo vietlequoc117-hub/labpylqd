@@ -164,23 +164,23 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl text-slate-100">
+    <div className="flex flex-col h-full bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs text-slate-800">
       {/* Header bar */}
-      <div className="bg-gradient-to-r from-indigo-950/90 via-slate-900 to-purple-950/90 px-4 py-3 border-b border-indigo-900/40 flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-gradient-to-r from-indigo-50/90 via-white to-purple-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 ring-1 ring-white/20">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
             <GraduationCap className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-sm md:text-base text-white tracking-tight flex items-center gap-1.5">
+              <h2 className="font-bold text-sm md:text-base text-slate-900 tracking-tight flex items-center gap-1.5">
                 <span>Trợ Lí AI Sư Phạm Tin Học THPT</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono font-medium">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-medium">
                   LQD AI Tutor
                 </span>
               </h2>
             </div>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               Giải thích thuật toán trực quan, dễ hiểu nhất dành riêng cho học sinh cấp 3
             </p>
           </div>
@@ -188,36 +188,36 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
 
         {/* Huy hiệu 100% Không Cần API */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Tích hợp sẵn 100% (Không cần API)</span>
           </span>
         </div>
       </div>
 
       {/* Dòng thông báo khẳng định không cần API cho học sinh THPT */}
-      <div className="px-4 py-1.5 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-indigo-950/40 border-b border-indigo-900/30 flex items-center justify-between gap-2 text-[11px]">
-        <div className="flex items-center gap-1.5 text-indigo-300">
-          <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+      <div className="px-4 py-1.5 bg-gradient-to-r from-indigo-50/70 via-purple-50/60 to-indigo-50/70 border-b border-indigo-100 flex items-center justify-between gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5 text-indigo-900">
+          <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
           <span>
-            <strong>Dành cho học sinh & giáo viên:</strong> Hoạt động ngay lập tức, phản hồi 0ms, không cần đăng ký tài khoản hay thiết lập bất kỳ khóa API nào!
+            <strong>Dành cho học sinh &amp; giáo viên:</strong> Hoạt động ngay lập tức, phản hồi 0ms, không cần đăng ký tài khoản hay thiết lập bất kỳ khóa API nào!
           </span>
         </div>
       </div>
 
       {/* Current Context Pill Bar */}
-      <div className="px-4 py-2 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between gap-2 text-xs flex-wrap">
+      <div className="px-4 py-2 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between gap-2 text-xs flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-slate-400 font-medium">Thuật toán đang xem:</span>
-          <span className="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 font-semibold border border-indigo-500/30">
+          <span className="text-slate-500 font-medium">Thuật toán đang xem:</span>
+          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
             {algorithmTitle}
           </span>
         </div>
 
         {totalSteps > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Tiến trình:</span>
-            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">
+            <span className="text-slate-500">Tiến trình:</span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px] border border-slate-200">
               Bước {currentStepIndex + 1}/{totalSteps} (Dòng {currentStep?.line_number || '-'})
             </span>
           </div>
@@ -225,14 +225,14 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
       </div>
 
       {/* 4 Chế độ phân tích 1-chạm (Pedagogical Quick Actions) */}
-      <div className="p-3 bg-slate-900 border-b border-slate-800">
+      <div className="p-3 bg-white border-b border-slate-200">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             onClick={() => setActiveMode('concept')}
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeMode === 'concept'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold shadow-md shadow-orange-500/20 ring-1 ring-amber-300'
-                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
             }`}
           >
             <Lightbulb className="w-4 h-4 shrink-0" />
@@ -243,8 +243,8 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             onClick={() => setActiveMode('code_breakdown')}
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeMode === 'code_breakdown'
-                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold shadow-md shadow-blue-500/20 ring-1 ring-sky-300'
-                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
+                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
             }`}
           >
             <Code2 className="w-4 h-4 shrink-0" />
@@ -255,8 +255,8 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             onClick={() => setActiveMode('complexity')}
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeMode === 'complexity'
-                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md shadow-purple-500/20 ring-1 ring-purple-300'
-                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
             }`}
           >
             <Clock className="w-4 h-4 shrink-0" />
@@ -267,8 +267,8 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             onClick={() => setActiveMode('exam_tips')}
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeMode === 'exam_tips'
-                ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold shadow-md shadow-rose-500/20 ring-1 ring-rose-300'
-                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
+                ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
             }`}
           >
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -278,10 +278,10 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[320px]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[320px] bg-slate-50/40">
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex items-center justify-center py-6 gap-3 text-indigo-400">
+          <div className="flex items-center justify-center py-6 gap-3 text-indigo-600">
             <RefreshCw className="w-5 h-5 animate-spin" />
             <span className="text-xs font-medium">Trợ lí AI đang phân tích và chuẩn bị bài giảng...</span>
           </div>
@@ -291,14 +291,14 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
         {!isLoading && activeMode !== 'chat' && (
           <div className="space-y-4">
             {/* Header of the current section */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                {activeMode === 'concept' && <Lightbulb className="w-4 h-4 text-amber-400" />}
-                {activeMode === 'code_breakdown' && <Code2 className="w-4 h-4 text-sky-400" />}
-                {activeMode === 'complexity' && <Clock className="w-4 h-4 text-purple-400" />}
-                {activeMode === 'exam_tips' && <AlertTriangle className="w-4 h-4 text-rose-400" />}
-                {activeMode === 'step_insight' && <Compass className="w-4 h-4 text-emerald-400" />}
-                <span className="font-bold text-sm text-slate-100">
+                {activeMode === 'concept' && <Lightbulb className="w-4 h-4 text-amber-500" />}
+                {activeMode === 'code_breakdown' && <Code2 className="w-4 h-4 text-sky-600" />}
+                {activeMode === 'complexity' && <Clock className="w-4 h-4 text-purple-600" />}
+                {activeMode === 'exam_tips' && <AlertTriangle className="w-4 h-4 text-rose-500" />}
+                {activeMode === 'step_insight' && <Compass className="w-4 h-4 text-emerald-600" />}
+                <span className="font-bold text-sm text-slate-900">
                   {activeMode === 'concept' && 'Ý tưởng đời sống & Bản chất thuật toán'}
                   {activeMode === 'code_breakdown' && 'Giải thích chi tiết từng câu lệnh Python'}
                   {activeMode === 'complexity' && 'Độ phức tạp thời gian Big-O dành cho học sinh'}
@@ -310,17 +310,17 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs transition-all cursor-pointer border border-slate-200 shadow-2xs"
                   title="Sao chép lời giải thích"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
                 </button>
 
                 <button
                   onClick={() => fetchTutorExplanation(activeMode)}
                   disabled={isLoading}
-                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
+                  className="p-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 transition-all cursor-pointer border border-slate-200 shadow-2xs"
                   title="Tải lại nội dung"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -329,13 +329,13 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             </div>
 
             {/* Explanation Content formatted */}
-            <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 text-xs md:text-sm leading-relaxed text-slate-200 whitespace-pre-line font-sans shadow-inner">
+            <div className="bg-white border border-slate-200/90 rounded-xl p-4 text-xs md:text-sm leading-relaxed text-slate-800 whitespace-pre-line font-sans shadow-xs">
               {responseContent || 'Đang chuẩn bị nội dung sư phạm...'}
             </div>
 
             {/* Quick Suggested Questions Pill Container */}
             <div className="pt-2">
-              <span className="text-[11px] font-semibold text-slate-400 block mb-2">
+              <span className="text-[11px] font-semibold text-slate-600 block mb-2">
                 💡 Câu hỏi gợi ý học sinh hay thắc mắc (Nhấn để hỏi AI ngay):
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -343,9 +343,9 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
                   <button
                     key={idx}
                     onClick={() => handleAskQuestion(q)}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/25 transition-all cursor-pointer text-left"
+                    className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 border border-slate-200 hover:border-indigo-200 transition-all cursor-pointer text-left shadow-2xs"
                   >
-                    <HelpCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                    <HelpCircle className="w-3 h-3 text-amber-500 shrink-0" />
                     <span>{q}</span>
                   </button>
                 ))}
@@ -357,24 +357,24 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
         {/* Chat Conversation History Mode */}
         {activeMode === 'chat' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span className="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Hội thoại Hỏi - Đáp cùng Trợ lí AI (Phản hồi tức thì)</span>
               </span>
               <button
                 onClick={() => setChatHistory([])}
-                className="text-[11px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800"
+                className="text-[11px] text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded bg-slate-100 border border-slate-200"
               >
                 Xóa lịch sử
               </button>
             </div>
 
             {chatHistory.length === 0 && (
-              <div className="text-center py-8 text-slate-400 text-xs space-y-2">
-                <Bot className="w-8 h-8 mx-auto text-indigo-400/60" />
+              <div className="text-center py-8 text-slate-500 text-xs space-y-2">
+                <Bot className="w-8 h-8 mx-auto text-indigo-500/60" />
                 <p>Hãy gõ câu hỏi bất kỳ hoặc chọn câu hỏi gợi ý bên dưới để Trợ lí AI giải đáp cho bạn nhé!</p>
-                <p className="text-[11px] text-emerald-400 font-medium">
+                <p className="text-[11px] text-emerald-700 font-semibold">
                   ⚡ Tích hợp sẵn 100% - Không cần cài đặt API hay mật khẩu!
                 </p>
               </div>
@@ -388,15 +388,15 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
                 }`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-md whitespace-pre-line ${
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-xs whitespace-pre-line ${
                     item.role === 'user'
                       ? 'bg-indigo-600 text-white rounded-tr-none'
-                      : 'bg-slate-800/90 text-slate-200 border border-slate-700/60 rounded-tl-none font-sans'
+                      : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none font-sans'
                   }`}
                 >
                   {item.text}
                 </div>
-                <span className="text-[10px] text-slate-500 px-1 mt-0.5">{item.time}</span>
+                <span className="text-[10px] text-slate-400 px-1 mt-0.5">{item.time}</span>
               </div>
             ))}
             <div ref={chatEndRef} />
@@ -405,7 +405,7 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
       </div>
 
       {/* Interactive Bottom Question Input Bar */}
-      <div className="p-3 bg-slate-950 border-t border-slate-800 flex flex-col gap-2">
+      <div className="p-3 bg-white border-t border-slate-200 flex flex-col gap-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -418,13 +418,13 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             value={customQuestion}
             onChange={(e) => setCustomQuestion(e.target.value)}
             placeholder="Đặt câu hỏi cho Trợ lí AI (Ví dụ: Tại sao phải dùng n - i - 1?)..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 shadow-xs"
           />
 
           <button
             type="submit"
             disabled={!customQuestion.trim() || isLoading}
-            className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+            className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Hỏi AI</span>

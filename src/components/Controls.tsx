@@ -74,31 +74,31 @@ export const Controls: React.FC<ControlsProps> = ({
   const progressPercent = totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 0;
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-lg flex flex-col gap-2.5">
+    <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs flex flex-col gap-2.5">
       {/* Top Row: Progress Bar & Current Status & Step Mode Toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-xs text-slate-200">
+          <span className="font-semibold text-xs text-slate-700">
             Tiến trình chạy từng bước:
           </span>
-          <span className="font-mono text-xs font-bold text-emerald-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 shadow-inner">
+          <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shadow-xs">
             Bước {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
           </span>
 
           {/* Nút chuyển đổi chế độ Thuật toán (~20 bước) vs Chi tiết (~60 dòng) */}
           {onToggleStepMode && rawStepsCount !== undefined && algorithmicStepsCount !== undefined && rawStepsCount > algorithmicStepsCount && (
-            <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] ml-1">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] ml-1">
               <button
                 type="button"
                 onClick={stepMode === 'algorithmic' ? undefined : onToggleStepMode}
                 className={`flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
                   stepMode === 'algorithmic'
                     ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
                 title="Chế độ Thuật toán: Chỉ duyệt các bước có ý nghĩa (so sánh, hoán đổi, chốt mốc) - khoảng 15-25 bước"
               >
-                <Sparkles className="w-3 h-3 text-amber-400" />
+                <Sparkles className="w-3 h-3 text-amber-300" />
                 <span>Thuật toán ({algorithmicStepsCount} bước)</span>
               </button>
               <button
@@ -106,8 +106,8 @@ export const Controls: React.FC<ControlsProps> = ({
                 onClick={stepMode === 'all' ? undefined : onToggleStepMode}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer ${
                   stepMode === 'all'
-                    ? 'bg-slate-700 text-white shadow-xs font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
                 title="Chế độ Chi tiết: Hiển thị từng dòng lệnh Python riêng lẻ (cờ swapped, loop header)"
               >
@@ -119,22 +119,22 @@ export const Controls: React.FC<ControlsProps> = ({
 
         {/* Action text */}
         {currentStep && (
-          <div className="text-xs text-slate-300 flex items-center gap-1.5">
+          <div className="text-xs text-slate-600 flex items-center gap-1.5 font-medium">
             {currentStep.event === 'call' && (
-              <span className="text-sky-300 flex items-center gap-1">
-                <CornerDownLeft className="w-3.5 h-3.5" />
+              <span className="text-sky-700 flex items-center gap-1 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                <CornerDownLeft className="w-3.5 h-3.5 text-sky-600" />
                 Vào hàm {currentStep.stack_frames?.[currentStep.stack_frames.length - 1]?.name}()
               </span>
             )}
             {currentStep.event === 'return' && (
-              <span className="text-emerald-300 flex items-center gap-1">
-                <CornerDownRight className="w-3.5 h-3.5" />
+              <span className="text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <CornerDownRight className="w-3.5 h-3.5 text-emerald-600" />
                 Trả về: {currentStep.return_value?.value || 'None'}
               </span>
             )}
             {currentStep.event === 'line' && (
-              <span className="text-slate-400">
-                Đang ở dòng <strong className="text-amber-300 font-mono">{currentStep.line_number}</strong>
+              <span className="text-slate-600">
+                Đang ở dòng <strong className="text-indigo-600 font-mono font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">{currentStep.line_number}</strong>
               </span>
             )}
           </div>
@@ -143,9 +143,9 @@ export const Controls: React.FC<ControlsProps> = ({
 
       {/* Interactive Range Slider */}
       <div className="relative flex items-center w-full group">
-        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
           <div
-            className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full transition-all duration-150"
+            className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full transition-all duration-150"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -162,14 +162,14 @@ export const Controls: React.FC<ControlsProps> = ({
       </div>
 
       {/* Bottom Controls Bar: Large, Accessible, Clear Buttons */}
-      <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-800/80 flex-wrap">
+      <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 flex-wrap">
         {/* Navigation Buttons */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => onGoToStep(0)}
             disabled={isFirst || totalSteps === 0}
             title="Quay về bước đầu tiên (Home)"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer border border-slate-200"
           >
             <SkipBack className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Về đầu</span>
@@ -179,7 +179,7 @@ export const Controls: React.FC<ControlsProps> = ({
             onClick={() => onGoToStep(currentStepIndex - 1)}
             disabled={isFirst || totalSteps === 0}
             title="Lùi lại 1 dòng (Phím mũi tên Trái)"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-200 text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 text-slate-800 text-xs font-medium transition-colors cursor-pointer border border-slate-200"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Lùi 1 bước</span>
@@ -190,7 +190,7 @@ export const Controls: React.FC<ControlsProps> = ({
             onClick={() => onGoToStep(currentStepIndex + 1)}
             disabled={isLast || totalSteps === 0}
             title="Chạy dòng lệnh tiếp theo (Phím mũi tên Phải hoặc F8)"
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition-all cursor-pointer ring-1 ring-emerald-400"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white text-xs font-bold shadow-xs transition-all cursor-pointer ring-1 ring-emerald-500/20"
           >
             <span>Bước tiếp theo</span>
             <ChevronRight className="w-4 h-4" />
@@ -201,9 +201,9 @@ export const Controls: React.FC<ControlsProps> = ({
             onClick={onTogglePlay}
             disabled={totalSteps === 0}
             title={isPlaying ? 'Tạm dừng (Phím Space)' : 'Tự động chạy liên tục (Phím Space)'}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer ${
               isPlaying
-                ? 'bg-amber-600 hover:bg-amber-500 text-white ring-1 ring-amber-400'
+                ? 'bg-amber-600 hover:bg-amber-500 text-white'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white'
             }`}
           >
@@ -224,7 +224,7 @@ export const Controls: React.FC<ControlsProps> = ({
             onClick={() => onGoToStep(totalSteps - 1)}
             disabled={isLast || totalSteps === 0}
             title="Đến bước cuối cùng (End)"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer border border-slate-200"
           >
             <span className="hidden sm:inline">Về cuối</span>
             <SkipForward className="w-3.5 h-3.5" />
@@ -232,23 +232,23 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
 
         {/* Speed & Keyboard Hint */}
-        <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="flex items-center gap-3 text-xs text-slate-500">
           <span className="hidden lg:inline text-[11px] text-slate-500">
-            (Bấm phím <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">←</kbd> <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">→</kbd> trên bàn phím)
+            (Bấm phím <kbd className="px-1 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono shadow-2xs">←</kbd> <kbd className="px-1 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono shadow-2xs">→</kbd> trên bàn phím)
           </span>
 
           <div className="flex items-center gap-1.5">
-            <Gauge className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline text-xs">Tốc độ:</span>
-            <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+            <Gauge className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline text-xs font-medium">Tốc độ:</span>
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
               {[0.5, 1, 2].map((s) => (
                 <button
                   key={s}
                   onClick={() => onChangeSpeed(s)}
                   className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                     speed === s
-                      ? 'bg-indigo-600 text-white font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {s}x

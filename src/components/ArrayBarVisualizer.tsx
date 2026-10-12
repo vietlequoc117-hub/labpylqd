@@ -460,9 +460,9 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-300 shadow-xl overflow-hidden flex flex-col ${
+      className={`rounded-xl border transition-all duration-300 shadow-xs overflow-hidden flex flex-col ${
         theme === 'light'
-          ? 'bg-[#eef3f7] border-slate-300 text-slate-800'
+          ? 'bg-white border-slate-200/90 text-slate-800'
           : 'bg-slate-900 border-slate-800 text-slate-100'
       }`}
     >
@@ -470,7 +470,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       <div
         className={`px-4 py-2.5 flex items-center justify-between border-b text-xs flex-wrap gap-2 ${
           theme === 'light'
-            ? 'bg-white/80 border-slate-200 text-slate-700'
+            ? 'bg-slate-50/80 border-slate-200 text-slate-800'
             : 'bg-slate-950/80 border-slate-800 text-slate-200'
         }`}
       >
@@ -565,7 +565,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       {/* KHU VỰC VẼ BIỂU ĐỒ CỘT (CHÍNH XÁC & TỐI ƯU CẢ CHO SỐ VÀ XÂU KÍ TỰ) */}
       <div
         className={`p-6 md:p-8 flex flex-col justify-end items-center relative overflow-x-auto min-h-[310px] select-none ${
-          theme === 'light' ? 'bg-[#e5e9ec]' : 'bg-[#0b1120]'
+          theme === 'light' ? 'bg-gradient-to-b from-slate-50/70 to-slate-100/90' : 'bg-[#0b1120]'
         }`}
       >
         {/* Container chứa tất cả các cột mảng */}

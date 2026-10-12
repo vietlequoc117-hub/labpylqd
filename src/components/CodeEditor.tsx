@@ -103,29 +103,29 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    monaco.editor.defineTheme('pyviz-dark', {
-      base: 'vs-dark',
+    monaco.editor.defineTheme('pyviz-light', {
+      base: 'vs',
       inherit: true,
       rules: [
-        { token: 'keyword', foreground: 'c084fc', fontStyle: 'bold' },
-        { token: 'identifier', foreground: 'e2e8f0' },
-        { token: 'string', foreground: '86efac' },
-        { token: 'number', foreground: '38bdf8' },
+        { token: 'keyword', foreground: '7c3aed', fontStyle: 'bold' },
+        { token: 'identifier', foreground: '1e293b' },
+        { token: 'string', foreground: '059669' },
+        { token: 'number', foreground: '0284c7' },
         { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
-        { token: 'delimiter', foreground: '94a3b8' },
+        { token: 'delimiter', foreground: '475569' },
       ],
       colors: {
-        'editor.background': '#090d16',
-        'editor.foreground': '#f1f5f9',
-        'editorCursor.foreground': '#38bdf8',
-        'editor.lineHighlightBackground': '#1e293b40',
-        'editorLineNumber.foreground': '#475569',
-        'editorLineNumber.activeForeground': '#38bdf8',
-        'editorGutter.background': '#090d16',
+        'editor.background': '#ffffff',
+        'editor.foreground': '#0f172a',
+        'editorCursor.foreground': '#2563eb',
+        'editor.lineHighlightBackground': '#f8fafc',
+        'editorLineNumber.foreground': '#94a3b8',
+        'editorLineNumber.activeForeground': '#2563eb',
+        'editorGutter.background': '#ffffff',
       },
     });
 
-    monaco.editor.setTheme('pyviz-dark');
+    monaco.editor.setTheme('pyviz-light');
   };
 
   // Cập nhật gạch chân lượn sóng báo lỗi đỏ (Monaco markers) trực tiếp trong trình soạn thảo
@@ -177,8 +177,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         },
         options: {
           isWholeLine: true,
-          className: 'bg-emerald-500/20 border-l-4 border-emerald-400',
-          glyphMarginClassName: 'text-emerald-400 font-bold',
+          className: 'bg-emerald-100/80 border-l-4 border-emerald-500',
+          glyphMarginClassName: 'text-emerald-600 font-bold',
         },
       });
     }
@@ -193,8 +193,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         },
         options: {
           isWholeLine: true,
-          className: 'bg-amber-500/15 border-l-4 border-amber-400',
-          glyphMarginClassName: 'text-amber-400 font-bold',
+          className: 'bg-amber-100/80 border-l-4 border-amber-500',
+          glyphMarginClassName: 'text-amber-600 font-bold',
         },
       });
     }
@@ -222,31 +222,31 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg gap-0">
+    <div className="flex flex-col h-full bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs gap-0">
       {/* Editor Header Bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-950/80 border-b border-slate-800 text-xs flex-wrap gap-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-50/80 border-b border-slate-200 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Code2 className="w-4 h-4 text-indigo-400" />
-          <span className="font-semibold text-slate-200">Trình soạn thảo Python</span>
+          <Code2 className="w-4 h-4 text-indigo-600" />
+          <span className="font-semibold text-slate-800">Trình soạn thảo Python</span>
 
           {/* Linter Status Badge */}
           {lintResult.errors.length > 0 ? (
             <span
-              className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1 font-bold animate-pulse"
+              className="text-[11px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 font-bold animate-pulse"
               title="Có lỗi cú pháp trong code"
             >
-              <Bug className="w-3 h-3 text-rose-400" /> {lintResult.errors.length} lỗi cần sửa
+              <Bug className="w-3 h-3 text-rose-600" /> {lintResult.errors.length} lỗi cần sửa
             </span>
           ) : lintResult.warnings.length > 0 ? (
             <span
-              className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-medium"
+              className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 font-medium"
               title="Có cảnh báo trong code"
             >
-              <AlertTriangle className="w-3 h-3 text-amber-400" /> {lintResult.warnings.length} lưu ý
+              <AlertTriangle className="w-3 h-3 text-amber-600" /> {lintResult.warnings.length} lưu ý
             </span>
           ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-mono">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Cú pháp đúng
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 font-mono font-medium">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cú pháp đúng
             </span>
           )}
         </div>
@@ -256,10 +256,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           {lintResult.canAutoFix && (
             <button
               onClick={handleAutoFix}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] border border-amber-300 shadow-xs transition-all cursor-pointer"
               title="Tự động thêm dấu hai chấm, dấu ngoặc và thụt lề"
             >
-              <Wand2 className="w-3 h-3" />
+              <Wand2 className="w-3 h-3 text-amber-700" />
               <span>⚡ Sửa lỗi nhanh</span>
             </button>
           )}
@@ -268,22 +268,22 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
       {/* Stdin Drawer Panel: Dữ liệu đầu vào chuẩn (Hỗ trợ Mảng số, Xâu kí tự & Từ vựng) */}
       {showStdin && (
-        <div className="bg-slate-950/95 border-b border-sky-900/50 p-3 transition-all text-xs flex flex-col gap-2.5 shadow-inner">
+        <div className="bg-sky-50/40 border-b border-sky-100 p-3 transition-all text-xs flex flex-col gap-2.5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-sky-500/20 text-sky-400">
+              <div className="p-1 rounded-md bg-sky-100 text-sky-700 border border-sky-200">
                 <Terminal className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-sky-300 font-bold text-xs">
+                <span className="text-sky-900 font-bold text-xs">
                   Dữ liệu đầu vào chuẩn (Standard Input / stdin):
                 </span>
               </div>
             </div>
 
             {parsedDataPreview && (
-              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-500/40 shadow-sm flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 shadow-xs flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{parsedDataPreview.label}</span>
               </span>
             )}
@@ -302,21 +302,21 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 }
               }}
               placeholder="Nhập mảng số (5 2 8 1 3) hoặc xâu kí tự (P Y T H O N hoặc ALGORITHM)..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-inner"
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-xs"
             />
           </div>
         </div>
       )}
 
       {/* Monaco Editor Container */}
-      <div className="flex-1 min-h-[300px] relative">
+      <div className="flex-1 min-h-[300px] relative bg-white">
         <Editor
           height="100%"
           defaultLanguage="python"
           value={code}
           onChange={(val) => onChange(val || '')}
           onMount={handleEditorDidMount}
-          theme="vs-dark"
+          theme="pyviz-light"
           options={{
             fontFamily: "'Fira Code', 'JetBrains Mono', Menlo, monospace",
             fontSize: 13,
@@ -336,7 +336,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Student Code Diagnostic & Error Guidance Panel */}
-      <div className="border-t border-slate-800 p-2 bg-slate-950/90">
+      <div className="border-t border-slate-200 p-2 bg-slate-50/70">
         <StudentCodeDiagnosticPanel
           lintResult={lintResult}
           executionError={error || null}

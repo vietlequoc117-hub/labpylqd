@@ -275,7 +275,7 @@ export default function App() {
       : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-800 font-sans selection:bg-indigo-500/20 selection:text-indigo-900">
       {/* Top Navigation Bar */}
       <Header
         onSelectPreset={handleSelectPreset}
@@ -323,72 +323,72 @@ export default function App() {
           {/* RIGHT COLUMN: Controls + Interactive Tabs (Variables / Memory / Pseudocode / Complexity / Tutor) (7 Cols) */}
           <div className="lg:col-span-7 flex flex-col gap-3">
             {/* View Switcher Tabs */}
-            <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-md overflow-x-auto">
+            <div className="flex items-center justify-between bg-white border border-slate-200/90 rounded-xl p-1 shadow-xs overflow-x-auto">
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveTab('barchart')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'barchart'
-                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20 ring-1 ring-sky-400'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-sky-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
                   <span>Biểu Đồ Cột</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Trực quan)</span>
+                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Trực quan)</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('variables')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'variables'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 ring-1 ring-emerald-400'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
                   <Variable className="w-3.5 h-3.5" />
                   <span>Theo Dõi Biến</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Dễ hiểu)</span>
+                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Dễ hiểu)</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('algorithm')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'algorithm'
-                      ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20 ring-1 ring-amber-400'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   <span>Giải Thích Thuật Toán</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Tiếng Việt)</span>
+                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Tiếng Việt)</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('quiz')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'quiz'
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 ring-1 ring-purple-400'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
-                  <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
                   <span>Trắc Nghiệm</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Ngẫu nhiên)</span>
+                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Ngẫu nhiên)</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('complexity')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'complexity'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
-                  <TrendingUp className="w-3.5 h-3.5 text-sky-400" />
+                  <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
                   <span>Độ phức tạp</span>
                   {complexityReport && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
                       {complexityReport.timeComplexity}
                     </span>
                   )}
@@ -398,19 +398,21 @@ export default function App() {
                   onClick={() => setActiveTab('ai-tutor')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'ai-tutor'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-300 font-bold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm ring-1 ring-purple-300 font-bold'
+                      : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                   <span>Trợ Lí AI (THPT)</span>
-                  <span className="text-[10px] font-normal opacity-90 hidden sm:inline">(Dễ hiểu)</span>
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded hidden sm:inline">
+                    Tích hợp
+                  </span>
                 </button>
               </div>
             </div>
 
             {/* Step Navigation & Controls Bar: Docked directly above the Variable Watcher */}
-            <div className="sticky top-16 z-20 shadow-md">
+            <div className="sticky top-16 z-20 shadow-xs">
               <Controls
                 currentStepIndex={currentStepIndex}
                 totalSteps={steps.length}
@@ -519,10 +521,10 @@ export default function App() {
       </main>
 
       {/* Footer Info */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-3 px-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-3 px-4 text-center text-xs text-slate-500 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>LQD_PYTHON_LAB &bull; Phòng thực hành ảo Python &amp; Trợ lí AI Tin học THPT</p>
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
+          <p className="text-slate-600 font-medium">LQD_PYTHON_LAB &bull; Phòng thực hành ảo Python &amp; Trợ lí AI Tin học THPT</p>
+          <div className="flex items-center gap-4 text-[11px] text-slate-500">
             <span>Trợ lí AI Sư phạm</span>
             <span>&bull;</span>
             <span>Trực quan hóa thuật toán</span>

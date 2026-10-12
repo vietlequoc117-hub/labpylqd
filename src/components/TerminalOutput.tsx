@@ -26,18 +26,18 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/80 border-b border-slate-800 text-xs">
+    <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs flex flex-col">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50/90 border-b border-slate-200 text-xs">
         <div className="flex items-center gap-2">
-          <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-semibold text-slate-200">Terminal (stdout)</span>
+          <Terminal className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="font-semibold text-slate-800">Terminal (stdout)</span>
         </div>
 
         <div className="flex items-center gap-2">
           {hasFutureOutput && onJumpToEnd && (
             <button
               onClick={onJumpToEnd}
-              className="flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/60 cursor-pointer transition-colors"
+              className="flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 cursor-pointer transition-colors font-medium"
               title="Nhảy đến bước in kết quả cuối cùng"
             >
               <FastForward className="w-3 h-3" />
@@ -48,9 +48,9 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
           {(stdout || finalStdout) && (
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             >
-              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Đã sao chép' : 'Sao chép'}</span>
             </button>
           )}
