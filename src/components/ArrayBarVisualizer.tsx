@@ -543,19 +543,9 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1.5">
             Biểu Đồ Cột Đang Để Trống
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mb-5 leading-relaxed">
-            Phần này đang được để trống. Khi bạn bấm nút <strong>Chạy Chương Trình</strong> (hoặc nhấn phím <strong>Ctrl + Enter</strong>), các cột mô phỏng thuật toán sẽ hiển thị và trực quan hóa từng bước!
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+            Phần này đang được để trống. Khi bạn bấm nút <strong>Chạy Chương Trình</strong> ở phía trên các cột mô phỏng thuật toán sẽ hiển thị và trực quan hóa từng bước!
           </p>
-          {onRunCode && (
-            <button
-              type="button"
-              onClick={onRunCode}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <Play className="w-4 h-4 fill-white" />
-              <span>Chạy Chương Trình Ngay (Ctrl + Enter)</span>
-            </button>
-          )}
         </div>
       ) : (
         <>
