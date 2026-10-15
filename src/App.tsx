@@ -89,6 +89,7 @@ export default function App() {
   const [stdinInput, setStdinInput] = useState<string>(PRESETS[0].defaultStdin || '');
   const [uncalledFunctionHint, setUncalledFunctionHint] = useState<string | null>(null);
   const [finalStdout, setFinalStdout] = useState<string>('');
+  const [hasRun, setHasRun] = useState<boolean>(false);
 
   // UI state: defaults to Array Bar Chart matching user request!
   const [activeTab, setActiveTab] = useState<'barchart' | 'variables' | 'algorithm' | 'quiz' | 'complexity' | 'ai-tutor'>('barchart');
@@ -104,6 +105,7 @@ export default function App() {
 
   // Run Trace & Analysis
   const handleRunCode = useCallback(async (codeToRun?: string, presetIdOverride?: string, customStdin?: string) => {
+    setHasRun(true);
     let targetCode = codeToRun || code;
     const targetPresetId = presetIdOverride || selectedPresetId;
     const targetStdin = customStdin !== undefined ? customStdin : stdinInput;
@@ -207,11 +209,6 @@ export default function App() {
     }
   }, [code, engine, selectedPresetId, stdinInput]);
 
-  // Initial auto-run on first load
-  useEffect(() => {
-    handleRunCode(PRESETS[0].code, PRESETS[0].id);
-  }, []);
-
   // Switch preset
   const handleSelectPreset = (presetId: string) => {
     const found = PRESETS.find((p) => p.id === presetId);
@@ -220,10 +217,14 @@ export default function App() {
       setCode(found.code);
       const targetStdin = found.defaultStdin || '';
       setStdinInput(targetStdin);
+      setRawSteps([]);
+      setCurrentStepIndex(0);
+      setFinalStdout('');
+      setExecutionError(null);
+      setHasRun(false); // Để trống, khi nào ấn Chạy Chương Trình mới hiển thị
       if (presetId === 'complexity-comparison') {
         setActiveTab('complexity');
       }
-      handleRunCode(found.code, presetId, targetStdin);
     }
   };
 
@@ -232,7 +233,11 @@ export default function App() {
     const found = PRESETS.find((p) => p.id === selectedPresetId);
     if (found) {
       setCode(found.code);
-      handleRunCode(found.code, selectedPresetId);
+      setRawSteps([]);
+      setCurrentStepIndex(0);
+      setFinalStdout('');
+      setExecutionError(null);
+      setHasRun(false);
     }
   };
 
@@ -444,6 +449,8 @@ export default function App() {
                   isPlaying={isPlaying}
                   onTogglePlay={() => setIsPlaying(!isPlaying)}
                   code={code}
+                  hasRun={hasRun}
+                  onRunCode={() => handleRunCode(undefined, undefined, stdinInput)}
                 />
               )}
 

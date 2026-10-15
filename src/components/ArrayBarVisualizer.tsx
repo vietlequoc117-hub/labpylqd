@@ -142,6 +142,8 @@ interface ArrayBarVisualizerProps {
   isPlaying?: boolean;
   onTogglePlay?: () => void;
   code: string;
+  hasRun?: boolean;
+  onRunCode?: () => void;
 }
 
 export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
@@ -156,6 +158,8 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   isPlaying,
   onTogglePlay,
   code,
+  hasRun = false,
+  onRunCode,
 }) => {
   // Theme toggle: 'light' (chuẩn như ảnh người dùng gửi) hoặc 'dark' (đồng bộ app)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -306,10 +310,10 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     return snapshots;
   }, [allSteps]);
 
-  // Fallback: Mảng mẫu mặc định đúng như trong ảnh nếu chưa chạy bước nào
-  const sampleArrayValues: VisualItemValue[] = [6, 11, 11, 21, 27, 49, 46, 35, 37, 35];
-  const values: VisualItemValue[] = arrayData?.values || sampleArrayValues;
+  // Dữ liệu mảng thực tế từ quá trình chạy mã Python
+  const values: VisualItemValue[] = arrayData?.values || [];
   const arrayName = arrayData?.name || 'arr';
+  const hasArrayData = values.length > 0;
 
   // Kiểm tra kiểu dữ liệu: mảng số hay xâu kí tự
   const isStringData = useMemo(() => {
@@ -418,8 +422,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     const isRedHighlight =
       pointers['i'] === index ||
       pointers['min_idx'] === index ||
-      pointers['mid'] === index ||
-      (currentStepIndex > 0 && index === 7 && !arrayData);
+      pointers['mid'] === index;
 
     if (isRedHighlight) {
       return 'red';
@@ -441,11 +444,6 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       if (code.includes('bubble_sort') && index >= values.length - iVal) {
         return 'orange';
       }
-    }
-
-    // Nếu là mảng mẫu mặc định chưa chạy
-    if (!arrayData && index <= 4) {
-      return 'orange';
     }
 
     // Kiểm tra xem toàn bộ mảng đã sắp xếp hoàn tất chưa
@@ -481,7 +479,11 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm">Biểu Đồ Cột Trực Quan (Array Bar Chart)</span>
-              {isStringData ? (
+              {!hasArrayData ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                  Đang để trống (Chờ chạy)
+                </span>
+              ) : isStringData ? (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
                   <Type className="w-3 h-3" />
                   <span>Xâu Kí Tự / Bảng mã ASCII</span>
@@ -494,15 +496,18 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
               )}
             </div>
             <span className="font-mono text-[11px] text-slate-500">
-              {arrayName}[0..{values.length - 1}] ({values.length} phần tử)
-              {isStringData && ' • Sắp xếp chuẩn theo thứ tự từ điển & ASCII'}
+              {hasArrayData
+                ? `${arrayName}[0..${values.length - 1}] (${values.length} phần tử)${
+                    isStringData ? ' • Sắp xếp chuẩn theo thứ tự từ điển & ASCII' : ''
+                  }`
+                : 'Nhấn Chạy Chương Trình để bắt đầu mô phỏng'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Badge mục tiêu tìm kiếm (nếu có) */}
-          {searchTargetInfo && (
+          {searchTargetInfo && hasArrayData && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-[11px]">
               <span className="font-semibold">Mục tiêu {searchTargetInfo.name}:</span>
               <strong className="px-1.5 py-0.2 rounded bg-emerald-500 text-white font-bold">
@@ -526,14 +531,42 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Chú thích màu sắc (Legend) */}
-      <div
-        className={`px-4 py-1.5 flex items-center justify-between text-[11px] border-b flex-wrap gap-2 ${
-          theme === 'light'
-            ? 'bg-slate-100/60 border-slate-200 text-slate-600'
-            : 'bg-slate-950/40 border-slate-800 text-slate-400'
-        }`}
-      >
+      {(!hasRun || !hasArrayData || totalSteps === 0) ? (
+        <div
+          className={`p-10 md:p-14 flex flex-col justify-center items-center text-center relative min-h-[320px] select-none ${
+            theme === 'light' ? 'bg-gradient-to-b from-slate-50/70 to-slate-100/90' : 'bg-[#0b1120]'
+          }`}
+        >
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600 mb-4 shadow-xs">
+            <BarChart2 className="w-8 h-8" />
+          </div>
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+            Biểu Đồ Cột Đang Để Trống
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mb-5 leading-relaxed">
+            Phần này đang được để trống. Khi bạn bấm nút <strong>Chạy Chương Trình</strong> (hoặc nhấn phím <strong>Ctrl + Enter</strong>), các cột mô phỏng thuật toán sẽ hiển thị và trực quan hóa từng bước!
+          </p>
+          {onRunCode && (
+            <button
+              type="button"
+              onClick={onRunCode}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              <span>Chạy Chương Trình Ngay (Ctrl + Enter)</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Chú thích màu sắc (Legend) */}
+          <div
+            className={`px-4 py-1.5 flex items-center justify-between text-[11px] border-b flex-wrap gap-2 ${
+              theme === 'light'
+                ? 'bg-slate-100/60 border-slate-200 text-slate-600'
+                : 'bg-slate-950/40 border-slate-800 text-slate-400'
+            }`}
+          >
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-[#f59e0b] shadow-sm"></span>
@@ -684,45 +717,12 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Thanh Điều Khiển Từng Bước (Controls Dock) */}
+      {/* Trạng thái Con trỏ & Chốt kết quả dãy số sau mỗi bước */}
       <div
-        className={`px-4 py-3 flex items-center justify-between border-t text-xs flex-wrap gap-2 ${
+        className={`px-4 py-2.5 flex items-center justify-between border-t text-xs flex-wrap gap-2 ${
           theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}
       >
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={onPrevStep}
-            disabled={currentStepIndex <= 0}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-slate-700 dark:text-slate-300 font-medium cursor-pointer transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Bước trước</span>
-          </button>
-
-          {onTogglePlay && (
-            <button
-              onClick={onTogglePlay}
-              className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg font-bold text-white shadow-md transition-all cursor-pointer ${
-                isPlaying
-                  ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
-                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
-              }`}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              <span>{isPlaying ? 'Tạm dừng' : 'Tự động chạy'}</span>
-            </button>
-          )}
-
-          <button
-            onClick={onNextStep}
-            disabled={currentStepIndex >= totalSteps - 1}
-            className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:pointer-events-none text-white font-bold shadow-md shadow-sky-600/20 cursor-pointer transition-all"
-          >
-            <span>Bước tiếp theo</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
 
         {/* Chốt kết quả dãy số sau mỗi lượt chạy của i, j */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -810,6 +810,8 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </>
+  )}
+</div>
   );
 };

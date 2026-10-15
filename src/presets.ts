@@ -2,39 +2,6 @@ import { PresetCode } from './types';
 
 export const PRESETS: PresetCode[] = [
   // =========================================================================
-  // BÀI TẬP TỰ DO (CUSTOM CODE & USER DATA INPUT)
-  // =========================================================================
-  {
-    id: 'custom-code',
-    title: '★ Tự do nhập Code & Dữ liệu của bạn',
-    category: 'Tự do sáng tạo',
-    description: 'Bạn có thể nhập bất kỳ thuật toán và dữ liệu nào bạn muốn. Hệ thống tự động phân tích bộ nhớ, vẽ đường cong con trỏ Heap, sinh mã giả và tính độ phức tạp Big-O.',
-    code: `# ========================================================
-# BÀI TOÁN TỰ NHẬP: BẠN CÓ THỂ TÙY Ý THAY ĐỔI CODE & DỮ LIỆU
-# ========================================================
-# 1. Bạn có thể gán dữ liệu trực tiếp vào biến, hoặc
-# 2. Dùng input() và nhập dữ liệu vào ô 'Dữ liệu stdin' bên trên
-
-def process_my_data(arr):
-    # Thuật toán tùy ý của bạn:
-    result = []
-    total = 0
-    for x in arr:
-        total += x
-        result.append(x * 2)
-    return total, result
-
-# Thay đổi mảng dữ liệu này theo ý bạn:
-user_data = [42, 17, 93, 8, 55, 31]
-print("Dữ liệu nhập vào:", user_data)
-
-sum_val, doubled_arr = process_my_data(user_data)
-print("Tổng các phần tử:", sum_val)
-print("Mảng sau khi xử lý:", doubled_arr)
-`,
-  },
-
-  // =========================================================================
   // THUẬT TOÁN SẮP XẾP (CHƯƠNG TRÌNH CHUẨN THEO YÊU CẦU)
   // =========================================================================
   {
@@ -475,5 +442,38 @@ print("Ghép lại thành xâu hoàn chỉnh:", "".join(sorted_chars))
       { lineNum: 5, text: 'Hoán đổi chars[j] ↔ chars[j + 1]', indent: 4, correspondingPythonLines: [8], explanation: 'Đổi chỗ hai kí tự trong xâu' },
       { lineNum: 6, text: 'Trả về xâu chars đã sắp xếp xong', indent: 1, correspondingPythonLines: [12], explanation: 'Trả về mảng kí tự theo thứ tự bảng chữ cái A-Z' },
     ],
+  },
+
+  // =========================================================================
+  // BÀI TẬP TỰ DO (CUSTOM CODE & USER DATA INPUT)
+  // =========================================================================
+  {
+    id: 'custom-code',
+    title: '★ Tự do nhập Code & Dữ liệu của bạn',
+    category: 'Tự do sáng tạo',
+    description: 'Bạn có thể nhập bất kỳ thuật toán và dữ liệu nào bạn muốn. Hệ thống tự động phân tích bộ nhớ, vẽ đường cong con trỏ Heap, sinh mã giả và tính độ phức tạp Big-O.',
+    code: `# ========================================================
+# BÀI TOÁN TỰ NHẬP: BẠN CÓ THỂ TÙY Ý THAY ĐỔI CODE & DỮ LIỆU
+# ========================================================
+# 1. Bạn có thể gán dữ liệu trực tiếp vào biến, hoặc
+# 2. Dùng input() và nhập dữ liệu vào ô 'Dữ liệu stdin' bên trên
+
+def process_my_data(arr):
+    # Thuật toán tùy ý của bạn:
+    result = []
+    total = 0
+    for x in arr:
+        total += x
+        result.append(x * 2)
+    return total, result
+
+# Thay đổi mảng dữ liệu này theo ý bạn:
+user_data = [42, 17, 93, 8, 55, 31]
+print("Dữ liệu nhập vào:", user_data)
+
+sum_val, doubled_arr = process_my_data(user_data)
+print("Tổng các phần tử:", sum_val)
+print("Mảng sau khi xử lý:", doubled_arr)
+`,
   },
 ];
