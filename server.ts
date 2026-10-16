@@ -352,39 +352,39 @@ TrẢ lời bằng tiếng Việt sư phạm, dễ hiểu.`;
   }
 });
 
-// Dedicated High School AI Algorithm Tutor Endpoint
 app.post('/api/gemini/high-school-tutor', async (req, res) => {
-  try {
-    const {
-      algorithmId = 'bubble-sort',
-      algorithmName = 'Thuật toán',
-      code = '',
-      mode = 'concept',
-      userQuestion = '',
-      currentStep = null,
-      stdinInput = '',
-    } = req.body;
+  const {
+    algorithmId = 'bubble-sort',
+    algorithmName = 'Thuật toán',
+    code = '',
+    mode = 'concept',
+    userQuestion = '',
+    currentStep = null,
+    stdinInput = '',
+  } = req.body;
 
-    const fallbackPedagogy = getHighSchoolPedagogy(algorithmId);
+  const fallbackPedagogy = getHighSchoolPedagogy(algorithmId);
 
-    // Fallback response generator when Gemini API is unconfigured, offline, or rate-limited
-    const getFallbackContent = () => {
-      if (mode === 'chat' && userQuestion) {
-        return answerStudentQuestion({
-          question: userQuestion,
-          algorithmId,
-          algorithmTitle: algorithmName,
-          code,
-          currentStep,
-          stdinInput,
-        });
-      }
-      return getLocalPedagogyResponse(
-        mode as 'concept' | 'code_breakdown' | 'complexity' | 'exam_tips' | 'step_insight',
+  // Fallback response generator when Gemini API is unconfigured, offline, or rate-limited
+  const getFallbackContent = () => {
+    if (mode === 'chat' && userQuestion) {
+      return answerStudentQuestion({
+        question: userQuestion,
         algorithmId,
-        currentStep
-      );
-    };
+        algorithmTitle: algorithmName,
+        code,
+        currentStep,
+        stdinInput,
+      });
+    }
+    return getLocalPedagogyResponse(
+      mode as 'concept' | 'code_breakdown' | 'complexity' | 'exam_tips' | 'step_insight',
+      algorithmId,
+      currentStep
+    );
+  };
+
+  try {
 
     if (!process.env.GEMINI_API_KEY || isQuotaExhausted()) {
       return res.json({
@@ -472,12 +472,7 @@ YÊU CẦU DÀNH RIÊNG CHO CHUYÊN GIA PYTHON:
     ) {
       markQuotaExhausted();
     }
-    const fallbackPedagogy = getHighSchoolPedagogy(req.body.algorithmId || 'bubble-sort');
-    let fallbackText = fallbackPedagogy.realLifeAnalogy;
-    if (req.body.mode === 'code_breakdown') fallbackText = fallbackPedagogy.codeBreakdown;
-    else if (req.body.mode === 'complexity') fallbackText = fallbackPedagogy.complexityExplanation;
-    else if (req.body.mode === 'exam_tips') fallbackText = fallbackPedagogy.examTipsAndTraps;
-
+    const fallbackText = getFallbackContent();
     return res.json({
       response: fallbackText,
       mode: req.body.mode || 'concept',

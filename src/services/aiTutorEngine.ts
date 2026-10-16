@@ -10,6 +10,7 @@
 
 import { TraceStep } from '../types';
 import { getHighSchoolPedagogy, AlgorithmPedagogy } from './aiTutorKnowledge';
+import { lintPythonCode, autoFixPythonCode, PYTHON_KEYWORDS } from './pythonLinter';
 
 export interface TutorResponse {
   content: string;
@@ -33,8 +34,81 @@ export function answerStudentQuestion(params: {
   const q = rawQ.toLowerCase().replace(/[?!.,;:_]/g, ' ');
   const pedagogy = getHighSchoolPedagogy(algorithmId);
 
+  // Phân tích cú pháp code hiện tại của học sinh bằng Chuyên gia Python Linter
+  const currentLintResult = lintPythonCode(code);
+  const keywordErrors = currentLintResult.errors.filter((e) => e.category === 'keyword');
+
   // =========================================================================
-  // 1. CÂU HỎI VỀ BIẾN CỜ SWAPPED TRONG BUBBLE SORT (Ưu tiên cao nhất tránh nhầm với swap)
+  // 0. CÂU HỎI VỀ LỖI TỪ KHÓA, TỰ NHẬP CODE BỊ LỖI, HOẶC YÊU CẦU BÁO LỖI CHÍNH XÁC
+  // (Ưu tiên số 1 - Khắc phục triệt để theo phản hồi của người dùng)
+  // =========================================================================
+  const isKeywordOrCustomInputErrorQuery =
+    q.includes('từ khóa') ||
+    q.includes('từ khoá') ||
+    q.includes('keyword') ||
+    q.includes('tự nhập') ||
+    q.includes('không báo được lỗi') ||
+    q.includes('không báo lỗi') ||
+    q.includes('báo lỗi') ||
+    q.includes('sao không báo') ||
+    (q.includes('lỗi') && (q.includes('em nhập') || q.includes('tôi nhập') || q.includes('gõ') || q.includes('viết'))) ||
+    (q.includes('kiểm tra') && (q.includes('code') || q.includes('lỗi')));
+
+  if (isKeywordOrCustomInputErrorQuery) {
+    // Nếu trong code hiện tại THỰC SỰ CÓ LỖI TỪ KHÓA hoặc LỖI CÚ PHÁP
+    if (currentLintResult.errors.length > 0) {
+      const errorListMd = currentLintResult.errors.map((err, idx) => {
+        return `**${idx + 1}. Dòng ${err.line}:**\n` +
+          `- **Phát hiện lỗi:** ${err.message}\n` +
+          (err.suggestion ? `- **Cách sửa chuẩn:** \`${err.suggestion}\`\n` : '');
+      }).join('\n');
+
+      const { fixedCode } = autoFixPythonCode(code);
+
+      return `🎯 **CHUYÊN GIA LẬP TRÌNH CẤP CAO PYTHON BÁO LỖI VÀ HƯỚNG DẪN KHẮC PHỤC TRIỆT ĐỂ:**\n\n` +
+        `Thầy/Cô chuyên gia đã rà soát toàn bộ code bạn tự nhập và phát hiện **${currentLintResult.errors.length} lỗi cú pháp/từ khóa** cần sửa ngay:\n\n` +
+        `${errorListMd}\n` +
+        `---\n\n` +
+        `### 🛠️ ĐOẠN CODE ĐÃ ĐƯỢC CHUYÊN GIA SỬA LỖI HOÀN CHỈNH:\n` +
+        `\`\`\`python\n` +
+        `${fixedCode}\n` +
+        `\`\`\`\n\n` +
+        `💡 **Mẹo tương tác trên màn hình:**\n` +
+        `- Bạn hãy nhìn vào **Trình soạn thảo Python bên trái**: Dòng lỗi đã được hệ thống **gạch chân lượn sóng màu đỏ**.\n` +
+        `- Ngay bên dưới trình soạn thảo có thanh **"Chẩn đoán code"** kèm nút màu cam **"⚡ Tự động sửa lỗi nhanh"**, bạn chỉ cần bấm 1 click là toàn bộ từ khóa và dấu hai chấm sẽ được sửa chuẩn xác 100%!`;
+    }
+
+    // Nếu học sinh hỏi về lý thuyết lỗi từ khóa hoặc code hiện tại chưa phát hiện lỗi
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: TOÀN BỘ VỀ LỖI TỪ KHÓA (KEYWORD ERROR) TRONG PYTHON**\n\n` +
+      `Thầy/Cô chuyên gia lập trình cấp cao giải thích cặn kẽ 4 nguyên tắc sống còn về từ khóa trong Python để bạn không bao giờ bị báo lỗi:\n\n` +
+      `### 1. Bốn lỗi từ khóa kinh điển học sinh hay mắc phải:\n` +
+      `- **Lỗi 1 - Sai chữ hoa/thường (Case Sensitivity):** Trong Python, 32/35 từ khóa bắt buộc viết **chữ thường 100%** (chỉ có 3 giá trị viết hoa chữ đầu là \`True\`, \`False\`, \`None\`). Nếu bạn viết \`Def\`, \`DEF\`, \`For\`, \`While\`, \`If\`, \`Return\` $\\to$ Máy tính sẽ báo lỗi văng chương trình **SyntaxError** hoặc **NameError** ngay!\n` +
+      `- **Lỗi 2 - Dùng từ khóa làm tên biến hoặc tên hàm:** Không bao giờ được đặt tên biến trùng với từ khóa, ví dụ: \`for = 5\`, \`if = 10\`, \`def = 2\`, \`class = "10A1"\` $\\to$ Báo lỗi **SyntaxError: cannot assign to ...**.\n` +
+      `- **Lỗi 3 - Gõ sai chính tả (Typo):** Các từ khóa hay bị gõ nhanh dẫn đến đảo chữ:\n` +
+      `  * \`fro\` $\\to$ Phải sửa thành \`for\`\n` +
+      `  * \`dfe\` $\\to$ Phải sửa thành \`def\`\n` +
+      `  * \`whle\` / \`whil\` $\\to$ Phải sửa thành \`while\`\n` +
+      `  * \`retrun\` / \`reutrn\` $\\to$ Phải sửa thành \`return\`\n` +
+      `  * \`for i im range(n)\` / \`for i on range(n)\` $\\to$ Từ khóa đúng bắt buộc là \`in\`!\n` +
+      `- **Lỗi 4 - Dùng từ khóa của ngôn ngữ khác (C++/Pascal/JS):**\n` +
+      `  * Dùng \`function\` hoặc \`func\` $\\to$ Trong Python phải dùng \`def\`.\n` +
+      `  * Dùng \`var\`, \`let\`, \`const\`, \`int x\` $\\to$ Trong Python gán trực tiếp \`x = 5\`.\n` +
+      `  * Dùng \`then\` trong \`if\` hoặc \`do\` trong \`while\` $\\to$ Trong Python chỉ cần dấu hai chấm \`:\`.\n\n` +
+      `### 2. Danh sách đầy đủ 35 từ khóa chuẩn mực trong Python 3:\n` +
+      `| Nhóm | Các từ khóa bắt buộc nhớ |\n` +
+      `| :--- | :--- |\n` +
+      `| **Khai báo & Định nghĩa** | \`def\`, \`class\`, \`lambda\`, \`global\`, \`nonlocal\`, \`pass\` |\n` +
+      `| **Vòng lặp** | \`for\`, \`while\`, \`break\`, \`continue\`, \`in\` |\n` +
+      `| **Rẽ nhánh điều kiện** | \`if\`, \`elif\`, \`else\` |\n` +
+      `| **Trả về & Ngoại lệ** | \`return\`, \`yield\`, \`try\`, \`except\`, \`finally\`, \`raise\`, \`assert\` |\n` +
+      `| **Toán tử logic** | \`and\`, \`or\`, \`not\`, \`is\` |\n` +
+      `| **Hằng số đặc biệt** | \`True\`, \`False\`, \`None\` |\n` +
+      `| **Module** | \`import\`, \`from\`, \`as\`, \`with\`, \`del\` |\n\n` +
+      `✅ **Hệ thống phòng lab đã tích hợp Trợ lý Chuyên gia Linter:** Khi bạn tự nhập code ở khung bên trái, nếu có bất kỳ lỗi từ khóa hay lỗi thụt lề nào, hệ thống sẽ **gạch chân đỏ lập tức** và hiện nút **"⚡ Tự động sửa lỗi nhanh"** để hỗ trợ bạn hoàn hảo!`;
+  }
+
+  // =========================================================================
+  // 1. CÂU HỎI VỀ BIẾN CỜ SWAPPED TRONG BUBBLE SORT (Ưu tiên cao tránh nhầm với swap)
   // =========================================================================
   const isSwappedFlagQuery =
     q.includes('swapped') ||

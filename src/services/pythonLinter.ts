@@ -25,8 +25,8 @@ export interface LintResult {
   };
 }
 
-// Danh sách từ khóa chuẩn của Python
-const PYTHON_KEYWORDS = new Set([
+// Danh sách từ khóa chuẩn của Python 3.10+
+export const PYTHON_KEYWORDS = new Set([
   'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await',
   'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except',
   'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
@@ -34,8 +34,172 @@ const PYTHON_KEYWORDS = new Set([
   'while', 'with', 'yield',
 ]);
 
+// Bản đồ từ khóa viết thường để kiểm tra lỗi viết hoa/thường (Case Sensitivity)
+export const LOWER_CASE_KEYWORDS_MAP: Record<string, string> = {
+  def: 'def',
+  for: 'for',
+  while: 'while',
+  if: 'if',
+  elif: 'elif',
+  else: 'else',
+  return: 'return',
+  break: 'break',
+  continue: 'continue',
+  import: 'import',
+  from: 'from',
+  as: 'as',
+  pass: 'pass',
+  class: 'class',
+  try: 'try',
+  except: 'except',
+  finally: 'finally',
+  with: 'with',
+  yield: 'yield',
+  raise: 'raise',
+  global: 'global',
+  nonlocal: 'nonlocal',
+  lambda: 'lambda',
+  assert: 'assert',
+  del: 'del',
+  in: 'in',
+  is: 'is',
+  and: 'and',
+  or: 'or',
+  not: 'not',
+  true: 'True',
+  false: 'False',
+  none: 'None',
+};
+
+// Từ khóa bắt đầu câu lệnh (Statement Starters)
+export const STATEMENT_KEYWORDS = [
+  'def', 'for', 'while', 'if', 'elif', 'else', 'return', 'break',
+  'continue', 'import', 'from', 'pass', 'class', 'try', 'except',
+  'finally', 'with', 'yield', 'raise', 'global', 'nonlocal', 'assert', 'del',
+];
+
+// Danh sách các từ khóa sai chính tả phổ biến (Common Keyword Typos)
+export const COMMON_KEYWORD_TYPOS: Record<string, { correct: string; name: string }> = {
+  // def
+  dfe: { correct: 'def', name: 'từ khóa khai báo hàm def' },
+  deff: { correct: 'def', name: 'từ khóa khai báo hàm def' },
+  defa: { correct: 'def', name: 'từ khóa khai báo hàm def' },
+  ddef: { correct: 'def', name: 'từ khóa khai báo hàm def' },
+  df: { correct: 'def', name: 'từ khóa khai báo hàm def' },
+  // for
+  fro: { correct: 'for', name: 'vòng lặp for' },
+  fo: { correct: 'for', name: 'vòng lặp for' },
+  fr: { correct: 'for', name: 'vòng lặp for' },
+  forr: { correct: 'for', name: 'vòng lặp for' },
+  // while
+  whle: { correct: 'while', name: 'vòng lặp while' },
+  whil: { correct: 'while', name: 'vòng lặp while' },
+  wile: { correct: 'while', name: 'vòng lặp while' },
+  whiel: { correct: 'while', name: 'vòng lặp while' },
+  // if
+  fi: { correct: 'if', name: 'câu lệnh điều kiện if' },
+  iff: { correct: 'if', name: 'câu lệnh điều kiện if' },
+  // elif
+  eli: { correct: 'elif', name: 'nhánh điều kiện elif' },
+  eliff: { correct: 'elif', name: 'nhánh điều kiện elif' },
+  elsif: { correct: 'elif', name: 'nhánh điều kiện elif' },
+  elseif: { correct: 'elif', name: 'nhánh điều kiện elif' },
+  // else
+  esle: { correct: 'else', name: 'nhánh else' },
+  els: { correct: 'else', name: 'nhánh else' },
+  elsee: { correct: 'else', name: 'nhánh else' },
+  // return
+  retrun: { correct: 'return', name: 'từ khóa return' },
+  retun: { correct: 'return', name: 'từ khóa return' },
+  reutrn: { correct: 'return', name: 'từ khóa return' },
+  retur: { correct: 'return', name: 'từ khóa return' },
+  returnn: { correct: 'return', name: 'từ khóa return' },
+  rtn: { correct: 'return', name: 'từ khóa return' },
+  // break
+  brek: { correct: 'break', name: 'lệnh dừng break' },
+  brake: { correct: 'break', name: 'lệnh dừng break' },
+  baerk: { correct: 'break', name: 'lệnh dừng break' },
+  breka: { correct: 'break', name: 'lệnh dừng break' },
+  // continue
+  contine: { correct: 'continue', name: 'lệnh tiếp tục continue' },
+  continew: { correct: 'continue', name: 'lệnh tiếp tục continue' },
+  contineu: { correct: 'continue', name: 'lệnh tiếp tục continue' },
+  cotinue: { correct: 'continue', name: 'lệnh tiếp tục continue' },
+  // import & from
+  improt: { correct: 'import', name: 'lệnh import' },
+  ipmort: { correct: 'import', name: 'lệnh import' },
+  impot: { correct: 'import', name: 'lệnh import' },
+  imprt: { correct: 'import', name: 'lệnh import' },
+  form: { correct: 'from', name: 'từ khóa from' },
+  // class
+  calss: { correct: 'class', name: 'từ khóa class' },
+  clas: { correct: 'class', name: 'từ khóa class' },
+  // pass
+  pas: { correct: 'pass', name: 'lệnh pass' },
+  passs: { correct: 'pass', name: 'lệnh pass' },
+  // assert, yield, raise, lambda
+  asert: { correct: 'assert', name: 'lệnh assert' },
+  yeld: { correct: 'yield', name: 'từ khóa yield' },
+  yeild: { correct: 'yield', name: 'từ khóa yield' },
+  rasie: { correct: 'raise', name: 'lệnh raise' },
+  lamda: { correct: 'lambda', name: 'từ khóa lambda' },
+  whith: { correct: 'with', name: 'từ khóa with' },
+  fianlly: { correct: 'finally', name: 'khối finally' },
+  exsept: { correct: 'except', name: 'khối except' },
+  glbal: { correct: 'global', name: 'từ khóa global' },
+  globl: { correct: 'global', name: 'từ khóa global' },
+  // boolean & none
+  ture: { correct: 'True', name: 'giá trị boolean True' },
+  tru: { correct: 'True', name: 'giá trị boolean True' },
+  flase: { correct: 'False', name: 'giá trị boolean False' },
+  fals: { correct: 'False', name: 'giá trị boolean False' },
+  fales: { correct: 'False', name: 'giá trị boolean False' },
+  // built-in functions
+  pritn: { correct: 'print', name: 'hàm in print()' },
+  prnt: { correct: 'print', name: 'hàm in print()' },
+  printt: { correct: 'print', name: 'hàm in print()' },
+  prin: { correct: 'print', name: 'hàm in print()' },
+  rang: { correct: 'range', name: 'hàm range()' },
+  ragne: { correct: 'range', name: 'hàm range()' },
+  rangge: { correct: 'range', name: 'hàm range()' },
+  rnage: { correct: 'range', name: 'hàm range()' },
+  raneg: { correct: 'range', name: 'hàm range()' },
+  lenght: { correct: 'len', name: 'hàm đo độ dài len()' },
+  lengh: { correct: 'len', name: 'hàm đo độ dài len()' },
+  legth: { correct: 'len', name: 'hàm đo độ dài len()' },
+  lenth: { correct: 'len', name: 'hàm đo độ dài len()' },
+  intput: { correct: 'input', name: 'hàm nhập input()' },
+  inptu: { correct: 'input', name: 'hàm nhập input()' },
+  inpt: { correct: 'input', name: 'hàm nhập input()' },
+  imput: { correct: 'input', name: 'hàm nhập input()' },
+};
+
+/**
+ * Thuật toán tính khoảng cách chỉnh sửa Levenshtein Distance giữa 2 từ
+ */
+export function levenshteinDistance(s1: string, s2: string): number {
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (s1[i - 1] === s2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
 // Danh sách các hàm & kiểu dữ liệu Built-in thông dụng trong Python
-const PYTHON_BUILTINS = new Set([
+export const PYTHON_BUILTINS = new Set([
   'abs', 'all', 'any', 'ascii', 'bin', 'bool', 'breakpoint', 'bytearray', 'bytes',
   'callable', 'chr', 'classmethod', 'compile', 'complex', 'delattr', 'dict',
   'dir', 'divmod', 'enumerate', 'eval', 'exec', 'filter', 'float', 'format',
@@ -302,13 +466,36 @@ export function lintPythonCode(code: string): LintResult {
 
     // =========================================================================
     // NHÓM 2: TỪ KHÓA & GÕ SAI (KEYWORDS & TYPOS)
+    // Chẩn đoán toàn diện mọi lỗi từ khóa của học sinh: viết hoa/thường, gõ sai chính tả,
+    // dùng từ khóa ngôn ngữ khác, dùng từ khóa làm tên biến/hàm, thiếu 'in' trong for.
     // =========================================================================
 
-    // 2.1 Boolean viết thường: true / false (Lỗi kinh điển của học sinh quen JS/C++/Java)
-    const lowercaseBoolMatch = codeWithoutStrComment.match(/\b(true|false)\b/);
-    if (lowercaseBoolMatch) {
-      const wrongVal = lowercaseBoolMatch[1];
-      const correctVal = wrongVal === 'true' ? 'True' : 'False';
+    // 2.1 Kiểm tra từ khóa Python viết hoa/thường sai (Case Sensitivity)
+    // Trong Python, tất cả các từ khóa bắt buộc viết THƯỜNG (trừ True, False, None)
+    const capitalizedKwRegex = /\b(Def|DEF|For|FOR|While|WHILE|If|IF|Elif|ELIF|Else|ELSE|Return|RETURN|Break|BREAK|Continue|CONTINUE|Import|IMPORT|From|FROM|Pass|PASS|Class|CLASS|In|IN|Is|IS|Not|NOT|And|AND|Or|OR)\b/g;
+    let capMatch;
+    while ((capMatch = capitalizedKwRegex.exec(codeWithoutStrComment)) !== null) {
+      const wrongWord = capMatch[1];
+      const lowerWord = wrongWord.toLowerCase();
+      // Bỏ qua nếu là chuỗi hoặc tên biến đã được định nghĩa
+      errors.push({
+        id: `capitalized-keyword-${lineNum}-${wrongWord}`,
+        line: lineNum,
+        column: rawLine.indexOf(wrongWord) + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'keyword-case-sensitivity',
+        message: `Dòng ${lineNum}: Lỗi từ khóa viết hoa/thường! Python phân biệt chữ hoa/thường (case-sensitive) và từ khóa này bắt buộc phải viết thường toàn bộ: "${lowerWord}". Bạn đang viết là "${wrongWord}".`,
+        suggestion: rawLine.replace(new RegExp(`\\b${wrongWord}\\b`, 'g'), lowerWord),
+        fixable: true,
+      });
+    }
+
+    // 2.2 Boolean viết thường hoặc sai hoa/thường: true / false / TRUE / FALSE
+    const boolMatch = codeWithoutStrComment.match(/\b(true|false|TRUE|FALSE)\b/);
+    if (boolMatch) {
+      const wrongVal = boolMatch[1];
+      const correctVal = wrongVal.toLowerCase() === 'true' ? 'True' : 'False';
       errors.push({
         id: `lowercase-boolean-${lineNum}`,
         line: lineNum,
@@ -316,14 +503,14 @@ export function lintPythonCode(code: string): LintResult {
         severity: 'error',
         category: 'keyword',
         rule: 'lowercase-boolean',
-        message: `Dòng ${lineNum}: Viết sai giá trị boolean "${wrongVal}". Trong Python giá trị đúng/sai bắt buộc phải viết hoa chữ cái đầu: "${correctVal}".`,
+        message: `Dòng ${lineNum}: Lỗi từ khóa boolean "${wrongVal}". Trong Python giá trị đúng/sai bắt buộc phải viết hoa chữ cái đầu và viết thường chữ sau: "${correctVal}".`,
         suggestion: rawLine.replace(new RegExp(`\\b${wrongVal}\\b`, 'g'), correctVal),
         fixable: true,
       });
     }
 
-    // 2.2 Null / Nil / None viết thường
-    const nullMatch = codeWithoutStrComment.match(/\b(null|nil|none)\b/);
+    // 2.3 Null / Nil / None viết thường: null, nil, none, NULL, NONE
+    const nullMatch = codeWithoutStrComment.match(/\b(null|nil|none|NULL|NONE)\b/);
     if (nullMatch && !codeWithoutStrComment.includes('def none')) {
       const wrongVal = nullMatch[1];
       errors.push({
@@ -333,29 +520,67 @@ export function lintPythonCode(code: string): LintResult {
         severity: 'error',
         category: 'keyword',
         rule: 'null-literal',
-        message: `Dòng ${lineNum}: Trong Python giá trị rỗng/không xác định là "None" (viết hoa chữ N), không dùng "${wrongVal}".`,
+        message: `Dòng ${lineNum}: Lỗi từ khóa giá trị rỗng. Trong Python giá trị rỗng/không xác định là "None" (chữ N viết hoa), không dùng "${wrongVal}".`,
         suggestion: rawLine.replace(new RegExp(`\\b${wrongVal}\\b`, 'g'), 'None'),
         fixable: true,
       });
     }
 
-    // 2.3 function hoặc func thay vì def
-    const funcMatch = trimmedClean.match(/^(function|func)\s+([a-zA-Z_]\w*)/);
-    if (funcMatch) {
+    // 2.4 Từ khóa của ngôn ngữ khác (C/C++, Java, JS, Pascal) gõ nhầm vào Python
+    // 2.4.1 Khai báo biến var, let, const, dim ở đầu dòng
+    const foreignVarMatch = trimmedClean.match(/^(var|let|const|dim)\s+([a-zA-Z_]\w*)\s*(=|:)/);
+    if (foreignVarMatch) {
+      const kw = foreignVarMatch[1];
+      const varName = foreignVarMatch[2];
       errors.push({
-        id: `func-keyword-${lineNum}`,
+        id: `foreign-var-keyword-${lineNum}`,
         line: lineNum,
-        column: rawLine.indexOf(funcMatch[1]) + 1,
+        column: rawLine.indexOf(kw) + 1,
         severity: 'error',
         category: 'keyword',
-        rule: 'function-keyword',
-        message: `Dòng ${lineNum}: Trong Python để khai báo hàm bắt buộc dùng từ khóa "def", không dùng "${funcMatch[1]}".`,
-        suggestion: rawLine.replace(/^(?:\s*)(?:function|func)\b/, 'def'),
+        rule: 'foreign-var-keyword',
+        message: `Dòng ${lineNum}: Lỗi từ khóa khai báo biến! Python là ngôn ngữ định kiểu động, không dùng từ khóa "${kw}" để khai báo biến. Hãy gán trực tiếp: "${varName} = giá_trị".`,
+        suggestion: rawLine.replace(new RegExp(`^(\\s*)${kw}\\s+`), '$1'),
         fixable: true,
       });
     }
 
-    // 2.4 else if thay vì elif
+    // 2.4.2 Khai báo hàm function, func, procedure, sub, void thay vì def
+    const foreignFnMatch = trimmedClean.match(/^(function|func|procedure|sub|void)\s+([a-zA-Z_]\w*)/);
+    if (foreignFnMatch) {
+      const kw = foreignFnMatch[1];
+      errors.push({
+        id: `foreign-fn-keyword-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf(kw) + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'foreign-function-keyword',
+        message: `Dòng ${lineNum}: Lỗi từ khóa khai báo hàm! Trong Python để khai báo hàm bắt buộc dùng từ khóa "def", không dùng "${kw}".`,
+        suggestion: rawLine.replace(new RegExp(`^(\\s*)${kw}\\b`), '$1def'),
+        fixable: true,
+      });
+    }
+
+    // 2.4.3 Từ khóa kiểu dữ liệu C/Java đứng trước biến (int x = 5, float y = 2.0, string s = "abc", bool f = True)
+    const foreignTypeMatch = trimmedClean.match(/^(int|float|string|str|bool|double|char)\s+([a-zA-Z_]\w*)\s*=/);
+    if (foreignTypeMatch) {
+      const typeKw = foreignTypeMatch[1];
+      const varName = foreignTypeMatch[2];
+      errors.push({
+        id: `foreign-type-keyword-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf(typeKw) + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'foreign-type-keyword',
+        message: `Dòng ${lineNum}: Lỗi cú pháp kiểu dữ liệu! Trong Python bạn không cần viết từ khóa kiểu "${typeKw}" trước biến. Hãy viết trực tiếp: "${varName} = ...".`,
+        suggestion: rawLine.replace(new RegExp(`^(\\s*)${typeKw}\\s+`), '$1'),
+        fixable: true,
+      });
+    }
+
+    // 2.4.4 else if thay vì elif
     if (/^\s*else\s+if\b/.test(trimmedClean)) {
       errors.push({
         id: `else-if-${lineNum}`,
@@ -364,48 +589,163 @@ export function lintPythonCode(code: string): LintResult {
         severity: 'error',
         category: 'keyword',
         rule: 'else-if-keyword',
-        message: `Dòng ${lineNum}: Python không có cú pháp "else if". Bạn phải dùng từ khóa "elif".`,
+        message: `Dòng ${lineNum}: Lỗi từ khóa nhánh điều kiện! Python không có cú pháp "else if". Bạn phải dùng từ khóa "elif".`,
         suggestion: rawLine.replace(/\belse\s+if\b/, 'elif'),
         fixable: true,
       });
     }
 
-    // 2.5 Lỗi gõ sai chính tả các từ khóa & hàm cơ bản
-    const keywordTypos = [
-      { regex: /\bpritn\b|\bprnt\b|\bprintt\b/i, correct: 'print', name: 'hàm in print()' },
-      { regex: /\brang\b|\bragne\b|\brangge\b|\brnage\b|\braneg\b/i, correct: 'range', name: 'hàm range()' },
-      { regex: /\bwhlie\b|\bwhil\b|\bwile\b/i, correct: 'while', name: 'vòng lặp while' },
-      { regex: /\bfro\b|\bfo\b(?=\s+[a-zA-Z_])/i, correct: 'for', name: 'vòng lặp for' },
-      { regex: /\bintput\b|\binptu\b|\binpt\b/i, correct: 'input', name: 'hàm nhập input()' },
-      { regex: /\bretrun\b|\bretun\b|\breturnn\b/i, correct: 'return', name: 'từ khóa return' },
-      { regex: /\bture\b/i, correct: 'True', name: 'giá trị boolean True' },
-      { regex: /\bflase\b/i, correct: 'False', name: 'giá trị boolean False' },
-      { regex: /\blenght\b|\blengh\b|\blegth\b/i, correct: 'len', name: 'hàm đo độ dài len()' },
-      { regex: /\bbreka\b|\bbaerk\b/i, correct: 'break', name: 'lệnh dừng break' },
-      { regex: /\bcontineu\b|\bcontinew\b/i, correct: 'continue', name: 'lệnh tiếp tục continue' },
-      { regex: /\bimprot\b/i, correct: 'import', name: 'lệnh import' },
-      { regex: /\beliff\b/i, correct: 'elif', name: 'nhánh elif' },
-      { regex: /\besle\b/i, correct: 'else', name: 'nhánh else' },
-    ];
+    // 2.4.5 Từ khóa "then" trong if (ảnh hưởng Pascal/VB)
+    if (/^\s*if\s+.*\b(?:then)\s*(?::|$)/.test(trimmedClean)) {
+      errors.push({
+        id: `if-then-keyword-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf('then') + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'no-then-keyword',
+        message: `Dòng ${lineNum}: Lỗi từ khóa "then"! Trong Python câu lệnh if không dùng từ khóa "then", chỉ cần kết thúc bằng dấu hai chấm ":".`,
+        suggestion: rawLine.replace(/\bthen\s*(:|$)/, ':'),
+        fixable: true,
+      });
+    }
 
-    for (const typo of keywordTypos) {
-      const match = trimmedClean.match(typo.regex);
-      if (match) {
+    // 2.4.6 Từ khóa "do" trong while (ảnh hưởng C/Pascal)
+    if (/^\s*while\s+.*\b(?:do)\s*(?::|$)/.test(trimmedClean)) {
+      errors.push({
+        id: `while-do-keyword-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf('do') + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'no-do-keyword',
+        message: `Dòng ${lineNum}: Lỗi từ khóa "do"! Trong Python vòng lặp while không dùng từ khóa "do", chỉ cần kết thúc bằng dấu hai chấm ":".`,
+        suggestion: rawLine.replace(/\bdo\s*(:|$)/, ':'),
+        fixable: true,
+      });
+    }
+
+    // 2.5 Dùng từ khóa dành riêng của Python làm tên biến hoặc tên hàm
+    const assignVarKwMatch = trimmedClean.match(/^([a-zA-Z_]\w*)\s*(=|\+=|-=|\*=|\/=|%=)/);
+    if (assignVarKwMatch && !/^(if|elif|while)/.test(trimmedClean)) {
+      const varCandidate = assignVarKwMatch[1];
+      if (PYTHON_KEYWORDS.has(varCandidate)) {
         errors.push({
-          id: `typo-${lineNum}-${typo.correct}`,
+          id: `reserved-keyword-as-var-${lineNum}`,
           line: lineNum,
-          column: rawLine.indexOf(match[0]) + 1,
+          column: rawLine.indexOf(varCandidate) + 1,
           severity: 'error',
           category: 'keyword',
-          rule: 'typo',
-          message: `Dòng ${lineNum}: Viết sai chính tả "${match[0]}". Bạn muốn viết là "${typo.correct}"?`,
-          suggestion: rawLine.replace(typo.regex, typo.correct),
+          rule: 'reserved-keyword-as-variable',
+          message: `Dòng ${lineNum}: Lỗi từ khóa nghiêm trọng! "${varCandidate}" là từ khóa dành riêng của Python, không bao giờ được sử dụng làm tên biến (gây lỗi SyntaxError: cannot assign to ${varCandidate}).`,
+          suggestion: `Hãy đổi tên biến thành: my_${varCandidate} hoặc ${varCandidate}_val`,
+          fixable: false,
+        });
+      }
+    }
+
+    const defFnKwMatch = trimmedClean.match(/^def\s+([a-zA-Z_]\w*)/);
+    if (defFnKwMatch) {
+      const fnCandidate = defFnKwMatch[1];
+      if (PYTHON_KEYWORDS.has(fnCandidate)) {
+        errors.push({
+          id: `reserved-keyword-as-fn-${lineNum}`,
+          line: lineNum,
+          column: rawLine.indexOf(fnCandidate) + 1,
+          severity: 'error',
+          category: 'keyword',
+          rule: 'reserved-keyword-as-function',
+          message: `Dòng ${lineNum}: Lỗi từ khóa nghiêm trọng! "${fnCandidate}" là từ khóa dành riêng của Python, không thể sử dụng làm tên hàm.`,
+          suggestion: `Hãy đổi tên hàm thành: run_${fnCandidate} hoặc my_${fnCandidate}`,
+          fixable: false,
+        });
+      }
+    }
+
+    // 2.6 Lỗi từ khóa trong cấu trúc vòng lặp for: for <var> <sai_in> <iterable>:
+    // Ví dụ: for i im range(n), for i inn range(n), for i on range(n), for i of range(n)
+    const forLoopMiddleKwMatch = trimmedClean.match(/^for\s+([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s+([a-zA-Z_]\w*)\s+(.+)/);
+    if (forLoopMiddleKwMatch && forLoopMiddleKwMatch[2] !== 'in') {
+      const wrongInWord = forLoopMiddleKwMatch[2];
+      const loopVars = forLoopMiddleKwMatch[1];
+      errors.push({
+        id: `for-missing-in-keyword-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf(wrongInWord) + 1,
+        severity: 'error',
+        category: 'keyword',
+        rule: 'for-loop-in-keyword',
+        message: `Dòng ${lineNum}: Lỗi từ khóa trong vòng lặp for! Vòng lặp for của Python bắt buộc phải dùng từ khóa "in" (ví dụ: for ${loopVars} in ...). Bạn đang viết sai thành "${wrongInWord}".`,
+        suggestion: rawLine.replace(new RegExp(`\\b${wrongInWord}\\b`), 'in'),
+        fixable: true,
+      });
+    }
+
+    // 2.7 Kiểm tra tra cứu từ điển các lỗi gõ sai từ khóa và hàm Built-in (COMMON_KEYWORD_TYPOS)
+    // Tự động quét từng từ trong dòng code sạch
+    const wordTokens = codeWithoutStrComment.match(/\b[a-zA-Z_]\w*\b/g) || [];
+    for (const token of wordTokens) {
+      if (COMMON_KEYWORD_TYPOS[token]) {
+        const typoInfo = COMMON_KEYWORD_TYPOS[token];
+        errors.push({
+          id: `typo-${lineNum}-${token}`,
+          line: lineNum,
+          column: rawLine.indexOf(token) + 1,
+          severity: 'error',
+          category: 'keyword',
+          rule: 'keyword-typo',
+          message: `Dòng ${lineNum}: Lỗi viết sai từ khóa "${token}"! Bạn muốn viết là "${typoInfo.correct}" (${typoInfo.name}) đúng không?`,
+          suggestion: rawLine.replace(new RegExp(`\\b${token}\\b`), typoInfo.correct),
           fixable: true,
         });
       }
     }
 
-    // 2.6 Gõ nhầm chữ cái 'o' hoặc 'O' thay cho số 0 (Ví dụ: total = o, x = o)
+    // 2.8 Chẩn đoán thông minh bằng thuật toán Levenshtein cho từ khóa đầu dòng câu lệnh
+    // Nếu dòng bắt đầu bằng một từ lạ không nằm trong biến, hàm, built-in hay từ khóa nhưng khoảng cách Levenshtein <= 2
+    const firstWordMatch = trimmedClean.match(/^([a-zA-Z_]\w*)/);
+    if (firstWordMatch) {
+      const firstWord = firstWordMatch[1];
+      const isKnown =
+        PYTHON_KEYWORDS.has(firstWord) ||
+        PYTHON_BUILTINS.has(firstWord) ||
+        declaredVariables.has(firstWord) ||
+        COMMON_KEYWORD_TYPOS[firstWord] ||
+        firstWord === 'pass' ||
+        firstWord.startsWith('_');
+
+      if (!isKnown) {
+        // Tìm từ khóa gần nhất có khoảng cách Levenshtein <= 2
+        let closestKw: string | null = null;
+        let minDistance = 999;
+
+        for (const kw of STATEMENT_KEYWORDS) {
+          const dist = levenshteinDistance(firstWord.toLowerCase(), kw);
+          // Cho phép khoảng cách 1 với từ ngắn (2-3 ký tự) hoặc 2 với từ dài hơn
+          const maxAllowed = kw.length <= 3 ? 1 : 2;
+          if (dist <= maxAllowed && dist < minDistance) {
+            minDistance = dist;
+            closestKw = kw;
+          }
+        }
+
+        if (closestKw && !errors.some((e) => e.line === lineNum && e.category === 'keyword')) {
+          errors.push({
+            id: `fuzzy-keyword-typo-${lineNum}-${firstWord}`,
+            line: lineNum,
+            column: rawLine.indexOf(firstWord) + 1,
+            severity: 'error',
+            category: 'keyword',
+            rule: 'fuzzy-keyword-typo',
+            message: `Dòng ${lineNum}: Lỗi từ khóa (Keyword Error)! Từ "${firstWord}" ở đầu câu lệnh không hợp lệ trong Python. Có phải bạn gõ nhầm từ khóa "${closestKw}" không?`,
+            suggestion: rawLine.replace(new RegExp(`^(\\s*)${firstWord}\\b`), `$1${closestKw}`),
+            fixable: true,
+          });
+        }
+      }
+    }
+
+    // 2.9 Gõ nhầm chữ cái 'o' hoặc 'O' thay cho số 0 (Ví dụ: total = o, x = o)
     const assignLetterOMatch = trimmedClean.match(/^([a-zA-Z_]\w*\s*=\s*)([oO])(\s*)$/);
     if (assignLetterOMatch) {
       const varName = trimmedClean.split('=')[0].trim();
@@ -423,7 +763,7 @@ export function lintPythonCode(code: string): LintResult {
       });
     }
 
-    // 2.7 Gõ nhầm chữ cái 'l' (chữ L thường) hoặc 'I' thay cho số 1
+    // 2.10 Gõ nhầm chữ cái 'l' (chữ L thường) hoặc 'I' thay cho số 1
     const assignLetterLMatch = trimmedClean.match(/^([a-zA-Z_]\w*\s*=\s*)([lI])(\s*)$/);
     if (assignLetterLMatch) {
       const varName = trimmedClean.split('=')[0].trim();
@@ -937,40 +1277,94 @@ export function autoFixPythonCode(code: string): { fixedCode: string; fixesAppli
       });
     }
 
-    // 4. Sửa boolean viết thường: true -> True, false -> False
-    if (/\btrue\b/.test(line)) {
-      line = line.replace(/\btrue\b/g, 'True');
+    // 4. Sửa boolean viết thường hoặc sai kiểu hoa/thường: true -> True, false -> False
+    if (/\b(?:true|TRUE)\b/.test(line)) {
+      line = line.replace(/\b(?:true|TRUE)\b/g, 'True');
       lines[i] = line;
-      fixesApplied.push(`Dòng ${i + 1}: Đổi "true" thành "True".`);
+      fixesApplied.push(`Dòng ${i + 1}: Đổi thành "True".`);
     }
-    if (/\bfalse\b/.test(line)) {
-      line = line.replace(/\bfalse\b/g, 'False');
+    if (/\b(?:false|FALSE)\b/.test(line)) {
+      line = line.replace(/\b(?:false|FALSE)\b/g, 'False');
       lines[i] = line;
-      fixesApplied.push(`Dòng ${i + 1}: Đổi "false" thành "False".`);
-    }
-
-    // 5. Sửa null -> None
-    if (/\bnull\b/.test(line)) {
-      line = line.replace(/\bnull\b/g, 'None');
-      lines[i] = line;
-      fixesApplied.push(`Dòng ${i + 1}: Đổi "null" thành "None".`);
+      fixesApplied.push(`Dòng ${i + 1}: Đổi thành "False".`);
     }
 
-    // 6. Sửa function/func -> def
-    if (/^\s*(?:function|func)\b/.test(line)) {
-      line = line.replace(/^(?:\s*)(?:function|func)\b/, 'def');
+    // 5. Sửa null / nil / none / NULL / NONE -> None
+    if (/\b(?:null|nil|none|NULL|NONE)\b/.test(line) && !line.includes('def none')) {
+      line = line.replace(/\b(?:null|nil|none|NULL|NONE)\b/g, 'None');
       lines[i] = line;
-      fixesApplied.push(`Dòng ${i + 1}: Đổi từ khóa thành "def".`);
+      fixesApplied.push(`Dòng ${i + 1}: Đổi thành "None".`);
     }
 
-    // 7. Sửa else if -> elif
+    // 6. Sửa từ khóa viết hoa/thường sai (Def -> def, For -> for, While -> while, If -> if, Return -> return...)
+    const capKwFixes = ['def', 'for', 'while', 'if', 'elif', 'else', 'return', 'break', 'continue', 'import', 'from', 'pass', 'class'];
+    for (const kw of capKwFixes) {
+      const regex = new RegExp(`\\b(${kw.charAt(0).toUpperCase() + kw.slice(1)}|${kw.toUpperCase()})\\b`, 'g');
+      if (regex.test(line)) {
+        line = line.replace(regex, kw);
+        lines[i] = line;
+        fixesApplied.push(`Dòng ${i + 1}: Đổi từ khóa viết hoa thành chữ thường chuẩn "${kw}".`);
+      }
+    }
+
+    // 7. Sửa từ khóa ngôn ngữ khác:
+    // 7.1 function / func / procedure / sub / void -> def
+    if (/^\s*(?:function|func|procedure|sub|void)\b/.test(line)) {
+      line = line.replace(/^(?:\s*)(?:function|func|procedure|sub|void)\b/, (m) => m.replace(/\w+$/, 'def'));
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi từ khóa khai báo hàm thành "def".`);
+    }
+    // 7.2 var / let / const / dim x = ... -> x = ...
+    if (/^\s*(?:var|let|const|dim)\s+([a-zA-Z_]\w*\s*=)/.test(line)) {
+      line = line.replace(/^\s*(?:var|let|const|dim)\s+/, '');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Bỏ từ khóa khai báo biến dư thừa.`);
+    }
+    // 7.3 int / float / string / bool x = ... -> x = ...
+    if (/^\s*(?:int|float|string|str|bool)\s+([a-zA-Z_]\w*\s*=)/.test(line)) {
+      line = line.replace(/^\s*(?:int|float|string|str|bool)\s+/, '');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Bỏ từ khóa kiểu dữ liệu C/Java trước tên biến.`);
+    }
+
+    // 8. Sửa else if -> elif
     if (/\belse\s+if\b/.test(line)) {
       line = line.replace(/\belse\s+if\b/g, 'elif');
       lines[i] = line;
       fixesApplied.push(`Dòng ${i + 1}: Đổi "else if" thành "elif".`);
     }
 
-    // 8. Sửa nhầm '=' thành '==' trong if/elif/while
+    // 9. Bỏ "then" trong if và "do" trong while
+    if (/^\s*if\s+.*\b(?:then)\s*(?::|$)/.test(line)) {
+      line = line.replace(/\bthen\s*(:|$)/, ':');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Xóa từ khóa "then" trong câu lệnh if.`);
+    }
+    if (/^\s*while\s+.*\b(?:do)\s*(?::|$)/.test(line)) {
+      line = line.replace(/\bdo\s*(:|$)/, ':');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Xóa từ khóa "do" trong câu lệnh while.`);
+    }
+
+    // 10. Sửa từ khóa sai trong vòng lặp for: for i im range(...) -> for i in range(...)
+    const forLoopFixMatch = line.match(/^(\s*for\s+[a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*\s+)(im|inn|on|of|into|within)\s+/);
+    if (forLoopFixMatch) {
+      line = line.replace(forLoopFixMatch[0], `${forLoopFixMatch[1]}in `);
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Sửa từ khóa vòng lặp "${forLoopFixMatch[2]}" thành "in".`);
+    }
+
+    // 11. Sửa từ khóa gõ sai chính tả (COMMON_KEYWORD_TYPOS)
+    for (const [wrong, info] of Object.entries(COMMON_KEYWORD_TYPOS)) {
+      const typoRegex = new RegExp(`\\b${wrong}\\b`, 'g');
+      if (typoRegex.test(line)) {
+        line = line.replace(typoRegex, info.correct);
+        lines[i] = line;
+        fixesApplied.push(`Dòng ${i + 1}: Sửa lỗi chính tả từ khóa "${wrong}" thành "${info.correct}".`);
+      }
+    }
+
+    // 12. Sửa nhầm '=' thành '==' trong if/elif/while
     if (/^(if|elif|while)\s+/.test(trimmed)) {
       const assignmentRegex = /(?<![<>=!])=(?!=)/;
       if (assignmentRegex.test(line) && !line.includes('==')) {
@@ -980,14 +1374,14 @@ export function autoFixPythonCode(code: string): { fixedCode: string; fixesAppli
       }
     }
 
-    // 9. Sửa '==' thành '=' khi gán biến ở đầu dòng
+    // 13. Sửa '==' thành '=' khi gán biến ở đầu dòng
     if (/^\s*[a-zA-Z_]\w*\s*==\s*[^=]/.test(line) && !/^(if|elif|while|assert|return)/.test(trimmed)) {
       line = line.replace('==', '=');
       lines[i] = line;
       fixesApplied.push(`Dòng ${i + 1}: Sửa "==" thành dấu gán "=".`);
     }
 
-    // 10. Sửa := thành =
+    // 14. Sửa := thành =
     if (/^\s*[a-zA-Z_]\w*\s*:=\s*[^=]/.test(line)) {
       line = line.replace(':=', '=');
       lines[i] = line;
@@ -1137,7 +1531,12 @@ export function translatePythonErrorToVietnamese(rawError: string): {
     let specificSuggestion =
       'Kiểm tra xem dòng lệnh có thiếu dấu hai chấm ":" ở cuối (def, for, if), thiếu dấu đóng ngoặc ")", hoặc nhầm dấu "=" và "==" không.';
 
-    if (rawError.includes("expected ':'")) {
+    if (rawError.includes("cannot assign to")) {
+      const kwMatch = rawError.match(/cannot assign to (\w+)/);
+      const kwName = kwMatch ? kwMatch[1] : 'từ khóa';
+      specificExplanation = `Dòng ${line || ''} mắc lỗi từ khóa nghiêm trọng: Cố gắng gán giá trị cho từ khóa "${kwName}". Trong Python, từ khóa dành riêng không thể dùng làm tên biến.`;
+      specificSuggestion = `Đổi tên biến "${kwName}" thành tên khác như "my_${kwName}" hoặc "${kwName}_val".`;
+    } else if (rawError.includes("expected ':'")) {
       specificExplanation = `Dòng ${line || ''} thiếu dấu hai chấm ":" bắt buộc ở cuối câu lệnh (ví dụ: def, for, if, while).`;
       specificSuggestion = 'Thêm dấu ":" vào cuối dòng.';
     } else if (rawError.includes("unmatched ')'") || rawError.includes("unmatched ']'")) {
@@ -1180,14 +1579,38 @@ export function translatePythonErrorToVietnamese(rawError: string): {
     const varMatch = rawError.match(/name '(\w+)' is not defined/);
     const varName = varMatch ? varMatch[1] : 'biến';
     let hint = `Hãy gán giá trị cho "${varName}" trước khi sử dụng (ví dụ: ${varName} = 0) hoặc kiểm tra xem bạn có viết sai chính tả tên biến không.`;
-    if (varName === 'true' || varName === 'false') {
+    let isKwError = false;
+
+    // Kiểm tra nếu tên biến chưa khai báo thực chất là do gõ sai từ khóa hoặc viết hoa từ khóa
+    const lowerVar = varName.toLowerCase();
+    if (LOWER_CASE_KEYWORDS_MAP[lowerVar]) {
+      isKwError = true;
+      hint = `Từ khóa "${varName}" bị lỗi chữ hoa/thường! Trong Python từ khóa này bắt buộc phải viết chữ thường: "${LOWER_CASE_KEYWORDS_MAP[lowerVar]}".`;
+    } else if (COMMON_KEYWORD_TYPOS[varName]) {
+      isKwError = true;
+      hint = `Lỗi từ khóa chính tả! Bạn gõ "${varName}", từ khóa đúng trong Python là "${COMMON_KEYWORD_TYPOS[varName].correct}".`;
+    } else if (varName === 'true' || varName === 'false') {
+      isKwError = true;
       hint = `Trong Python, giá trị đúng/sai bắt buộc phải viết hoa chữ cái đầu: "${varName === 'true' ? 'True' : 'False'}".`;
     } else if (varName === 'null') {
+      isKwError = true;
       hint = 'Trong Python không có "null", hãy dùng giá trị "None" (viết hoa chữ N).';
+    } else {
+      // Tìm từ khóa gần nhất bằng Levenshtein
+      for (const kw of STATEMENT_KEYWORDS) {
+        if (levenshteinDistance(lowerVar, kw) <= (kw.length <= 3 ? 1 : 2)) {
+          isKwError = true;
+          hint = `Có phải bạn gõ sai từ khóa "${kw}" thành "${varName}" không? Hãy sửa lại thành "${kw}".`;
+          break;
+        }
+      }
     }
+
     return {
-      title: 'Lỗi tên biến chưa khai báo (NameError)',
-      vietnameseExplanation: `Biến hoặc hàm "${varName}" được sử dụng nhưng máy tính chưa biết nó được tạo ra từ đâu.`,
+      title: isKwError ? 'Lỗi từ khóa (Keyword NameError)' : 'Lỗi tên biến chưa khai báo (NameError)',
+      vietnameseExplanation: isKwError
+        ? `Phát hiện lỗi từ khóa ở dòng ${line || ''}: Từ "${varName}" bị máy tính hiểu nhầm là tên biến vì gõ sai chính tả hoặc sai hoa/thường!`
+        : `Biến hoặc hàm "${varName}" được sử dụng nhưng máy tính chưa biết nó được tạo ra từ đâu.`,
       suggestion: hint,
       line,
     };

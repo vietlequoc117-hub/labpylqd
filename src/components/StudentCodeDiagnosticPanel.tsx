@@ -98,6 +98,19 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
           Tất cả ({totalIssues})
         </button>
 
+        {stats.keywordErrors > 0 && (
+          <button
+            onClick={() => setActiveCategoryFilter('keyword')}
+            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold ${
+              activeCategoryFilter === 'keyword'
+                ? 'bg-orange-600 text-white shadow-xs'
+                : 'text-orange-800 bg-orange-100/80 border border-orange-300 hover:bg-orange-200'
+            }`}
+          >
+            🔥 Từ khóa & Chính tả ({stats.keywordErrors})
+          </button>
+        )}
+
         {stats.syntaxErrors > 0 && (
           <button
             onClick={() => setActiveCategoryFilter('syntax')}
@@ -134,19 +147,6 @@ export const StudentCodeDiagnosticPanel: React.FC<StudentCodeDiagnosticPanelProp
             }`}
           >
             Thiếu dấu & Ngoặc ({stats.symbolErrors})
-          </button>
-        )}
-
-        {stats.keywordErrors > 0 && (
-          <button
-            onClick={() => setActiveCategoryFilter('keyword')}
-            className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-              activeCategoryFilter === 'keyword'
-                ? 'bg-orange-600 text-white font-bold'
-                : 'text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100'
-            }`}
-          >
-            Từ khóa & Chính tả ({stats.keywordErrors})
           </button>
         )}
       </div>

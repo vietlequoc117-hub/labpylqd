@@ -23,6 +23,7 @@ import {
 import { TraceStep } from '../types';
 import { getHighSchoolPedagogy } from '../services/aiTutorKnowledge';
 import { getLocalPedagogyResponse, answerStudentQuestion } from '../services/aiTutorEngine';
+import { lintPythonCode } from '../services/pythonLinter';
 
 interface HighSchoolAITutorProps {
   algorithmId: string;
@@ -157,8 +158,14 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Kiểm tra lỗi cú pháp/từ khóa thời gian thực trong code hiện tại của học sinh
+  const currentLint = lintPythonCode(code);
+  const keywordErrorsCount = currentLint.errors.filter((e) => e.category === 'keyword').length;
+
   // Danh sách câu hỏi gợi ý chuẩn mực từ chuyên gia Python dành riêng cho học sinh THPT
   const allQuickQuestions = [
+    'Kiểm tra lỗi từ khóa và cú pháp trong code em tự nhập?',
+    'Các lỗi từ khóa (Keyword Error) kinh điển trong Python và cách tránh?',
     'Tại sao hoán đổi được a, b = b, a không cần biến temp?',
     'Làm sao để sửa code thành sắp xếp giảm dần?',
     'Tại sao vòng lặp trong lại là range(0, n - i - 1)?',
@@ -234,6 +241,25 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
           </div>
         )}
       </div>
+
+      {/* Code Error Warning Banner if student has syntax / keyword error */}
+      {currentLint.errors.length > 0 && (
+        <div
+          onClick={() => handleAskQuestion('Kiểm tra lỗi từ khóa và cú pháp trong code em tự nhập?')}
+          className="px-4 py-2.5 bg-rose-50 border-b border-rose-200 flex items-center justify-between gap-2 text-xs text-rose-800 cursor-pointer hover:bg-rose-100/80 transition-all"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+            <span className="font-semibold">
+              Chuyên gia phát hiện {currentLint.errors.length} lỗi trong code {keywordErrorsCount > 0 ? `(có ${keywordErrorsCount} lỗi từ khóa)` : ''}! Nhấn vào đây để xem hướng dẫn sửa chi tiết.
+            </span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-200 text-rose-900 font-bold flex items-center gap-1 shrink-0">
+            <span>Hỏi chuyên gia sửa ngay</span>
+            <ChevronRight className="w-3 h-3" />
+          </span>
+        </div>
+      )}
 
       {/* 4 Chế độ phân tích 1-chạm (Pedagogical Quick Actions) */}
       <div className="p-3 bg-white border-b border-slate-200">
