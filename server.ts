@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './src/complexityData.ts';
 import { getHighSchoolPedagogy } from './src/services/aiTutorKnowledge.ts';
+import { answerStudentQuestion, getLocalPedagogyResponse } from './src/services/aiTutorEngine.ts';
 
 dotenv.config();
 
@@ -368,39 +369,21 @@ app.post('/api/gemini/high-school-tutor', async (req, res) => {
 
     // Fallback response generator when Gemini API is unconfigured, offline, or rate-limited
     const getFallbackContent = () => {
-      switch (mode) {
-        case 'concept':
-          return fallbackPedagogy.realLifeAnalogy;
-        case 'code_breakdown':
-          return fallbackPedagogy.codeBreakdown;
-        case 'complexity':
-          return fallbackPedagogy.complexityExplanation;
-        case 'exam_tips':
-          return fallbackPedagogy.examTipsAndTraps;
-        case 'step_insight':
-          if (currentStep) {
-            return `📍 **Phân tích bước hiện tại (Dòng ${currentStep.line_number || '-'}):**\n- Sự kiện: \`${currentStep.event || 'line'}\`.\n- Giá trị các biến hiện thời: \`${JSON.stringify(currentStep.stack_frames?.[currentStep.stack_frames.length - 1]?.variables || {})}\`.\n- Dòng lệnh này đang thực hiện thao tác duyệt hoặc so sánh/hoán đổi trong thuật toán. Bạn hãy quan sát biến đổi trên biểu đồ cột trực quan!`;
-          }
-          return 'Chưa có bước thực thi nào được chọn. Hãy bấm Chạy Chương Trình và bấm Tiếp Tục từng bước để xem phân tích.';
-        case 'chat':
-          if (userQuestion) {
-            // Check matching keywords in userQuestion
-            const qLower = userQuestion.toLowerCase();
-            if (qLower.includes('độ phức tạp') || qLower.includes('big-o') || qLower.includes('o(n')) {
-              return fallbackPedagogy.complexityExplanation;
-            }
-            if (qLower.includes('dòng') || qLower.includes('code') || qLower.includes('vòng lặp') || qLower.includes('tại sao')) {
-              return `${fallbackPedagogy.codeBreakdown}\n\n💡 **Lời khuyên thêm:** ${fallbackPedagogy.examTipsAndTraps}`;
-            }
-            if (qLower.includes('bẫy') || qLower.includes('sai') || qLower.includes('thi') || qLower.includes('mẹo')) {
-              return fallbackPedagogy.examTipsAndTraps;
-            }
-            return `Chào bạn! Với thuật toán **${fallbackPedagogy.name}**:\n\n${fallbackPedagogy.realLifeAnalogy}\n\nNếu bạn muốn tìm hiểu sâu hơn, hãy chọn các nút phân tích nhanh ở trên hoặc hỏi thêm nhé!`;
-          }
-          return fallbackPedagogy.realLifeAnalogy;
-        default:
-          return fallbackPedagogy.realLifeAnalogy;
+      if (mode === 'chat' && userQuestion) {
+        return answerStudentQuestion({
+          question: userQuestion,
+          algorithmId,
+          algorithmTitle: algorithmName,
+          code,
+          currentStep,
+          stdinInput,
+        });
       }
+      return getLocalPedagogyResponse(
+        mode as 'concept' | 'code_breakdown' | 'complexity' | 'exam_tips' | 'step_insight',
+        algorithmId,
+        currentStep
+      );
     };
 
     if (!process.env.GEMINI_API_KEY || isQuotaExhausted()) {
@@ -411,11 +394,15 @@ app.post('/api/gemini/high-school-tutor', async (req, res) => {
       });
     }
 
-    // Build pedagogical prompt for High School Students (THPT)
-    let prompt = `Bạn là Thầy/Cô Trợ lí AI Chuyên Biệt Giải Thích Thuật Toán cho Học Sinh Cấp THPT (Lớp 10, 11, 12) của nền tảng LQD_PYTHON_LAB.
-Nhiệm vụ: Giải thích thuật toán và code Python một cách CỰC KỲ DỄ HIỂU, TRỰC QUAN, GẦN GŨI với lứa tuổi học sinh cấp 3.
+    // Build pedagogical prompt as Senior Python Expert for High School Students (THPT)
+    let prompt = `Bạn là CHUYÊN GIA LẬP TRÌNH CẤP CAO PYTHON (Senior Python Software Engineer) kiêm Chuyên gia Sư phạm Tin học THPT chuyên bồi dưỡng học sinh cấp 3 (Lớp 10, 11, 12) của nền tảng LQD_PYTHON_LAB.
+VAI TRÒ & NGUYÊN TẮC BẮT BUỘC:
+1. TRẢ LỜI ĐÚNG TRỌNG TÂM 100%: Đi thẳng vào vấn đề học sinh hỏi, trả lời trực diện, chuẩn xác, không nói vòng vo lan man.
+2. CỰC KỲ DỄ HIỂU CHO HỌC SINH CẤP 3: Dùng ngôn ngữ sư phạm trong sáng, ví dụ trực quan gần gũi, giúp học sinh nắm vững bản chất từ gốc rễ.
+3. CHUẨN XÁC KỸ THUẬT PYTHON: Giải thích chính xác bản chất bộ nhớ máy tính (chỉ số 0-based offset, cơ chế tuple packing/unpacking khi hoán đổi a, b = b, a, độ phức tạp Big-O, mutability của list vs immutability của string, bảng mã ASCII...).
+4. TRÌNH BÀY CHUYÊN NGHIỆP: Định dạng Markdown đẹp mắt, có gạch đầu dòng, bôi đậm từ khóa then chốt và kèm khối code Python ngắn gọn có chú thích rõ ràng.
 
-Thông tin thuật toán hiện tại:
+Thông tin bài toán hiện tại:
 - Tên thuật toán: "${algorithmName}" (Mã: ${algorithmId})
 - Dữ liệu đầu vào: ${stdinInput || '(Mặc định)'}
 - Đoạn mã Python học sinh đang học:
@@ -436,7 +423,7 @@ ${code || '# Chưa có code'}
       prompt += `\nYêu cầu: Hãy giải thích Ý TƯỞNG CỐT LÕI của thuật toán này bằng một VÍ DỤ ĐỜI SỐNG THỰC TẾ cực kỳ sinh động và quen thuộc (như xếp hàng chào cờ, lật từ điển, nhặt đồ, chia bài...).
 Nêu rõ tại sao con người lại nghĩ ra cách làm này. Trình bày bằng Markdown đẹp mắt, có emoji, gạch đầu dòng rõ ràng.`;
     } else if (mode === 'code_breakdown') {
-      prompt += `\nYêu cầu: Hãy MỔ XẺ TỪNG DÒNG CODE Python trên.
+      prompt += `\nYêu cầu: Hãy MỔ XẺ TỪNG DÒNG CODE Python trên dưới góc nhìn Chuyên gia Python cấp cao.
 Giải thích cho học sinh hiểu:
 - Từng vòng lặp for/while chạy từ đâu đến đâu và để làm gì?
 - Câu lệnh điều kiện if kiểm tra cái gì?
@@ -460,7 +447,11 @@ Biến nào vừa thay đổi giá trị? Điều gì sẽ diễn ra ở bước
       prompt += `\nCâu hỏi của học sinh:
 "${userQuestion}"
 
-Yêu cầu: Hãy trả lời câu hỏi của học sinh bằng giọng văn thầy/cô giáo dạy Tin học THPT ân cần, dễ hiểu, giải thích tường tận với ví dụ minh họa và code snippet nếu cần.`;
+YÊU CẦU DÀNH RIÊNG CHO CHUYÊN GIA PYTHON:
+1. Trả lời TRỰC DIỆN, ĐÚNG 100% TRỌNG TÂM câu hỏi của học sinh (không nói chung chung, không né tránh câu hỏi).
+2. Giải thích rõ ràng nguyên lý hoạt động của Python ở khía cạnh này (ví dụ: tại sao cú pháp này lại như vậy, máy tính chạy câu lệnh này ra sao).
+3. Đưa ra ví dụ code Python ngắn gọn, minh họa dễ hiểu nhất để học sinh cấp 3 đọc là hiểu ngay.
+4. Cảnh báo các lỗi thường gặp hoặc bẫy đề thi liên quan đến câu hỏi này.`;
     }
 
     const geminiRes = await ai.models.generateContent({

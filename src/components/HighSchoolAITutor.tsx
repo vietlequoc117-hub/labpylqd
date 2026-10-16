@@ -157,9 +157,16 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Danh sách câu hỏi gợi ý mở rộng, bao gồm giải đáp về việc không cần API
+  // Danh sách câu hỏi gợi ý chuẩn mực từ chuyên gia Python dành riêng cho học sinh THPT
   const allQuickQuestions = [
-    ...defaultPedagogy.quickQuestions,
+    'Tại sao hoán đổi được a, b = b, a không cần biến temp?',
+    'Làm sao để sửa code thành sắp xếp giảm dần?',
+    'Tại sao vòng lặp trong lại là range(0, n - i - 1)?',
+    'Tác dụng của biến cờ swapped là gì?',
+    'Tại sao chỉ số mảng trong Python lại bắt đầu từ 0?',
+    'Phân biệt Bubble Sort và Selection Sort?',
+    'Tại sao khi so sánh xâu thì "10" < "2"?',
+    'Các lỗi Python hay gặp và cách sửa dứt điểm?',
     'Trợ lí AI có cần cài đặt API hay tài khoản không?',
   ];
 
@@ -168,39 +175,43 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
       {/* Header bar */}
       <div className="bg-gradient-to-r from-indigo-50/90 via-white to-purple-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xs">
             <GraduationCap className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-sm md:text-base text-slate-900 tracking-tight flex items-center gap-1.5">
-                <span>Trợ Lí AI Sư Phạm Tin Học THPT</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-medium">
-                  LQD AI Tutor
+                <span>Trợ Lí AI - Chuyên Gia Lập Trình Python Cấp Cao</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-bold">
+                  Senior Python Tutor
                 </span>
               </h2>
             </div>
-            <p className="text-[11px] text-slate-500">
-              Giải thích thuật toán trực quan, dễ hiểu nhất dành riêng cho học sinh cấp 3
+            <p className="text-[11px] text-slate-600 font-medium">
+              Chuyên gia phân tích giải thích đúng trọng tâm, chuẩn xác bản chất và dễ hiểu nhất cho học sinh THPT
             </p>
           </div>
         </div>
 
-        {/* Huy hiệu 100% Không Cần API */}
-        <div className="flex items-center gap-2">
+        {/* Huy hiệu Chuyên gia & Không Cần API */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Đúng trọng tâm &bull; Dễ hiểu 100%</span>
+          </span>
           <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Tích hợp sẵn 100% (Không cần API)</span>
+            <span>Tích hợp sẵn (Không cần API)</span>
           </span>
         </div>
       </div>
 
-      {/* Dòng thông báo khẳng định không cần API cho học sinh THPT */}
+      {/* Dòng khẳng định phong cách chuyên gia sư phạm */}
       <div className="px-4 py-1.5 bg-gradient-to-r from-indigo-50/70 via-purple-50/60 to-indigo-50/70 border-b border-indigo-100 flex items-center justify-between gap-2 text-[11px]">
         <div className="flex items-center gap-1.5 text-indigo-900">
           <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
           <span>
-            <strong>Dành cho học sinh &amp; giáo viên:</strong> Hoạt động ngay lập tức, phản hồi 0ms, không cần đăng ký tài khoản hay thiết lập bất kỳ khóa API nào!
+            <strong>Đồng hành cùng học sinh THPT:</strong> Giải đáp cặn kẽ mọi thắc mắc từ bản chất bộ nhớ RAM, cú pháp Python, đến mẹo làm bài thi trắc nghiệm không bao giờ nhầm lẫn!
           </span>
         </div>
       </div>
@@ -417,7 +428,7 @@ export const HighSchoolAITutor: React.FC<HighSchoolAITutorProps> = ({
             type="text"
             value={customQuestion}
             onChange={(e) => setCustomQuestion(e.target.value)}
-            placeholder="Đặt câu hỏi cho Trợ lí AI (Ví dụ: Tại sao phải dùng n - i - 1?)..."
+            placeholder="Hỏi Chuyên gia Python bất kỳ điều gì (Ví dụ: Tại sao a, b = b, a lại hoán đổi được?)..."
             className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 shadow-xs"
           />
 
