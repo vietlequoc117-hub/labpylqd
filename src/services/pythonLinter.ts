@@ -311,6 +311,18 @@ export function lintPythonCode(code: string): LintResult {
     if (impMatch) declaredVariables.add(impMatch[1]);
   }
 
+  // Theo dõi các biến đã được khai báo theo trình tự thời gian (Chronological Scope Tracking)
+  const variablesDeclaredSoFar = new Set<string>([
+    ...PYTHON_BUILTINS,
+    '__name__', '__file__', '_',
+  ]);
+  // Khai báo trước các tên hàm và thư viện import
+  definedFunctions.forEach((f) => variablesDeclaredSoFar.add(f.name));
+  lines.forEach((l) => {
+    const impM = stripStringsAndComments(l).trim().match(/^(?:import|from)\s+([a-zA-Z_]\w*)/);
+    if (impM) variablesDeclaredSoFar.add(impM[1]);
+  });
+
   let expectedIndentLevel: number | null = null;
   let inMultiLineParen = 0;
 
@@ -1056,61 +1068,134 @@ export function lintPythonCode(code: string): LintResult {
     // NHÓM 4: NGỮ NGHĨA & LOGIC (SEMANTICS & LOGIC)
     // =========================================================================
 
-    // 4.1 Thu thập khai báo hàm và tham số
+    // 4.1 Thu thập khai báo hàm và tham số dòng hiện tại
     const defMatch = trimmedClean.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)/);
+    const currentDefParams = new Set<string>();
     if (defMatch) {
       const fnName = defMatch[1];
       const params = defMatch[2].split(',').map((p) => p.trim()).filter(Boolean);
       definedFunctions.push({ name: fnName, line: lineNum, params });
       declaredVariables.add(fnName);
-      params.forEach((p) => declaredVariables.add(p));
+      params.forEach((p) => {
+        declaredVariables.add(p);
+        currentDefParams.add(p);
+      });
     }
 
-    // 4.2 Thu thập biến từ vòng lặp for: for x in arr: hoặc for i, val in enumerate(arr):
+    // 4.2 Thu thập biến từ vòng lặp for dòng hiện tại
     const forMatch = trimmedClean.match(/^for\s+([^:]+)\s+in\s+/);
+    const currentForVars = new Set<string>();
     if (forMatch) {
       const rawVars = forMatch[1].replace(/[()]/g, '').split(',');
       rawVars.forEach((v) => {
         const cleanedVar = v.trim();
         if (/^[a-zA-Z_]\w*$/.test(cleanedVar)) {
           declaredVariables.add(cleanedVar);
+          currentForVars.add(cleanedVar);
         }
       });
     }
 
-    // 4.3 Thu thập biến từ phép gán: a = ..., a, b = ..., a += ...
-    const assignMatch = trimmedClean.match(/^([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*(\+=|-=|\*=|\/=|%=|=)/);
-    if (assignMatch && !/^(if|elif|while)/.test(trimmedClean)) {
-      const vars = assignMatch[1].split(',').map((v) => v.trim());
-      vars.forEach((v) => {
-        if (/^[a-zA-Z_]\w*$/.test(v)) {
-          declaredVariables.add(v);
+    // 4.3 Thu thập biến thuộc vế trái của phép gán đơn (a = ..., a, b = ...)
+    const simpleAssignMatch = trimmedClean.match(/^\s*([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*=[^=]/);
+    const simpleLhsVars = new Set<string>();
+    if (simpleAssignMatch && !/^(if|elif|while)/.test(trimmedClean)) {
+      simpleAssignMatch[1].split(',').forEach((v) => {
+        const cleaned = v.trim();
+        if (/^[a-zA-Z_]\w*$/.test(cleaned)) {
+          declaredVariables.add(cleaned);
+          simpleLhsVars.add(cleaned);
         }
       });
     }
 
-    // 4.4 Kiểm tra biến chưa được định nghĩa (Undefined Variable / NameError)
-    const forIterableMatch = trimmedClean.match(/^for\s+[^:]+\s+in\s+([a-zA-Z_]\w*)\s*:/);
-    if (forIterableMatch) {
-      const iterableName = forIterableMatch[1];
+    // 4.4 CHẨN ĐOÁN TOÀN DIỆN LỖI BIẾN CHƯA KHAI BÁO & LỖI GÕ SAI TÊN BIẾN (NameError & Typos)
+    // Quét tất cả các token định danh được ĐỌC (READ) trong dòng lệnh hiện tại
+    const wordTokensOnLine = codeWithoutStrComment.match(/\b[a-zA-Z_]\w*\b/g) || [];
+
+    for (const token of wordTokensOnLine) {
+      // Bỏ qua từ khóa, built-in, hoặc biến đã được khai báo ở các dòng trước / dòng hiện tại
       if (
-        !declaredVariables.has(iterableName) &&
-        !PYTHON_BUILTINS.has(iterableName) &&
-        !PYTHON_KEYWORDS.has(iterableName)
+        PYTHON_KEYWORDS.has(token) ||
+        PYTHON_BUILTINS.has(token) ||
+        variablesDeclaredSoFar.has(token) ||
+        simpleLhsVars.has(token) ||
+        currentDefParams.has(token) ||
+        currentForVars.has(token) ||
+        token.startsWith('_')
       ) {
+        continue;
+      }
+
+      // Bỏ qua tên phương thức gọi sau dấu chấm (ví dụ: arr.append, string.split)
+      const dotMethodRegex = new RegExp(`\\.\\s*${token}\\b`);
+      if (dotMethodRegex.test(codeWithoutStrComment)) {
+        continue;
+      }
+
+      // Bỏ qua tên module trong câu lệnh import / from
+      if (/^(import|from)\b/.test(trimmedClean)) {
+        continue;
+      }
+
+      // Tránh báo lỗi trùng nếu dòng này đã báo lỗi từ khóa
+      if (errors.some((e) => e.line === lineNum && (e.category === 'keyword' || e.rule.includes('keyword')))) {
+        continue;
+      }
+
+      // So sánh với các biến đã khai báo trước đó để tìm lỗi gõ sai tên biến (Levenshtein Distance)
+      let bestMatchVar: string | null = null;
+      let minDistance = 999;
+
+      for (const declaredVar of variablesDeclaredSoFar) {
+        if (PYTHON_BUILTINS.has(declaredVar) || PYTHON_KEYWORDS.has(declaredVar) || declaredVar.length < 2) {
+          continue;
+        }
+        const dist = levenshteinDistance(token.toLowerCase(), declaredVar.toLowerCase());
+        const maxDist = declaredVar.length <= 4 ? 1 : 2;
+        if (dist <= maxDist && dist < minDistance) {
+          minDistance = dist;
+          bestMatchVar = declaredVar;
+        }
+      }
+
+      if (bestMatchVar && !errors.some((e) => e.line === lineNum && e.id.includes(token))) {
         errors.push({
-          id: `undefined-var-in-for-${lineNum}`,
+          id: `undefined-var-typo-${lineNum}-${token}`,
           line: lineNum,
-          column: rawLine.indexOf(iterableName) + 1,
+          column: rawLine.indexOf(token) + 1,
+          severity: 'error',
+          category: 'semantics',
+          rule: 'undefined-variable-typo',
+          message: `Dòng ${lineNum}: Lỗi tên biến chưa khai báo (NameError)! Biến "${token}" chưa được tạo ra. Có phải bạn gõ nhầm từ tên biến gốc "${bestMatchVar}" không?`,
+          suggestion: rawLine.replace(new RegExp(`\\b${token}\\b`, 'g'), bestMatchVar),
+          fixable: true,
+        });
+      } else if (!errors.some((e) => e.line === lineNum && e.id.includes(token))) {
+        const isAugmented = new RegExp(`^\\s*${token}\\s*(\\+=|-=|\\*=|\\/=|%=)`).test(trimmedClean);
+        errors.push({
+          id: `undefined-var-${lineNum}-${token}`,
+          line: lineNum,
+          column: rawLine.indexOf(token) + 1,
           severity: 'error',
           category: 'semantics',
           rule: 'undefined-variable',
-          message: `Dòng ${lineNum}: Biến "${iterableName}" được duyệt qua nhưng chưa từng được khai báo hay gán giá trị ở các dòng trước (Lỗi NameError).`,
-          suggestion: `Hãy tạo mảng "${iterableName} = [1, 2, 3]" trước vòng lặp này.`,
+          message: isAugmented
+            ? `Dòng ${lineNum}: Lỗi tên biến chưa khai báo (NameError)! Biến "${token}" chưa được khởi tạo giá trị ban đầu trước phép gán tích lũy.`
+            : `Dòng ${lineNum}: Lỗi tên biến chưa khai báo (NameError)! Biến "${token}" được sử dụng nhưng chưa từng được định nghĩa hay gán giá trị ở các dòng trước.`,
+          suggestion: `Hãy gán giá trị ban đầu "${token} = 0" (hoặc giá trị thích hợp) ở các dòng trước.`,
           fixable: false,
         });
       }
     }
+
+    // Cập nhật variablesDeclaredSoFar với các biến vừa được khởi tạo ở dòng này
+    if (defMatch && defMatch[1]) variablesDeclaredSoFar.add(defMatch[1]);
+    currentDefParams.forEach((p) => variablesDeclaredSoFar.add(p));
+    currentForVars.forEach((v) => variablesDeclaredSoFar.add(v));
+    simpleLhsVars.forEach((v) => variablesDeclaredSoFar.add(v));
+    const augAssignMatch = trimmedClean.match(/^([a-zA-Z_]\w*)\s*(\+=|-=|\*=|\/=|%=)/);
+    if (augAssignMatch) variablesDeclaredSoFar.add(augAssignMatch[1]);
 
     // 4.5 Chỉ số mảng chứa phép chia số thực "/" (Index must be int, not float)
     const floatDivIndexing = codeWithoutStrComment.match(/\[[^\]]*\b[a-zA-Z0-9_\(\)]+\s*\/\s*[a-zA-Z0-9_\(\)]+[^\]]*\]/);
@@ -1537,6 +1622,18 @@ export function autoFixPythonCode(code: string): { fixedCode: string; fixesAppli
       line = line.replace(/;+\s*$/, '');
       lines[i] = line;
       fixesApplied.push(`Dòng ${i + 1}: Xóa dấu chấm phẩy ";" thừa ở cuối dòng.`);
+    }
+  }
+
+  // 18.5 Tự động sửa lỗi gõ sai tên biến (ví dụ: tota -> total, resul -> result, user_dat -> user_data)
+  const tempDiagnostics = lintPythonCode(lines.join('\n'));
+  for (const err of tempDiagnostics.errors) {
+    if (err.rule === 'undefined-variable-typo' && err.fixable && err.suggestion) {
+      const lineIdx = err.line - 1;
+      if (lineIdx >= 0 && lineIdx < lines.length) {
+        lines[lineIdx] = err.suggestion;
+        fixesApplied.push(`Dòng ${err.line}: Sửa tên biến gõ sai thành tên biến đã khai báo chuẩn.`);
+      }
     }
   }
 
