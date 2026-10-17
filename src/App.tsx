@@ -35,10 +35,12 @@ import { lintPythonCode } from './services/pythonLinter';
 import { filterAlgorithmicSteps } from './utils/stepFilter';
 import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './complexityData';
 
+const DEFAULT_PRESET = PRESETS.find((p) => p.id === 'custom-code') || PRESETS[0];
+
 export default function App() {
-  // Preset & Code state
-  const [selectedPresetId, setSelectedPresetId] = useState<string>(PRESETS[0].id);
-  const [code, setCode] = useState<string>(PRESETS[0].code);
+  // Preset & Code state (Mặc định chọn '★ Tự do nhập Code & Dữ liệu của bạn')
+  const [selectedPresetId, setSelectedPresetId] = useState<string>(DEFAULT_PRESET.id);
+  const [code, setCode] = useState<string>(DEFAULT_PRESET.code);
 
   // Execution state (raw steps & smart algorithmic filtered steps)
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -86,7 +88,7 @@ export default function App() {
   const [engine, setEngine] = useState<'auto' | 'pyodide' | 'backend'>('auto');
 
   // Standard input (stdin) for user code using input()
-  const [stdinInput, setStdinInput] = useState<string>(PRESETS[0].defaultStdin || '');
+  const [stdinInput, setStdinInput] = useState<string>(DEFAULT_PRESET.defaultStdin || '');
   const [uncalledFunctionHint, setUncalledFunctionHint] = useState<string | null>(null);
   const [finalStdout, setFinalStdout] = useState<string>('');
   const [hasRun, setHasRun] = useState<boolean>(false);
