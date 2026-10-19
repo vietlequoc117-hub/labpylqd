@@ -361,6 +361,7 @@ app.post('/api/gemini/high-school-tutor', async (req, res) => {
     userQuestion = '',
     currentStep = null,
     stdinInput = '',
+    scope = 'all',
   } = req.body;
 
   const fallbackPedagogy = getHighSchoolPedagogy(algorithmId);
@@ -375,10 +376,20 @@ app.post('/api/gemini/high-school-tutor', async (req, res) => {
         code,
         currentStep,
         stdinInput,
+        scope,
       });
     }
     return getLocalPedagogyResponse(
-      mode as 'concept' | 'code_breakdown' | 'complexity' | 'exam_tips' | 'step_insight',
+      mode as
+        | 'concept'
+        | 'code_breakdown'
+        | 'complexity'
+        | 'exam_tips'
+        | 'step_insight'
+        | 'curriculum_matrix'
+        | 'curriculum_roadmap'
+        | 'curriculum_bigo'
+        | 'curriculum_exam_traps',
       algorithmId,
       currentStep
     );
@@ -398,14 +409,14 @@ app.post('/api/gemini/high-school-tutor', async (req, res) => {
     let prompt = `Bạn là CHUYÊN GIA LẬP TRÌNH CẤP CAO PYTHON (Senior Python Software Engineer) kiêm Chuyên gia Sư phạm Tin học THPT chuyên bồi dưỡng học sinh cấp 3 (Lớp 10, 11, 12) của nền tảng LQD_PYTHON_LAB.
 VAI TRÒ & NGUYÊN TẮC BẮT BUỘC:
 1. TRẢ LỜI ĐÚNG TRỌNG TÂM 100%: Đi thẳng vào vấn đề học sinh hỏi, trả lời trực diện, chuẩn xác, không nói vòng vo lan man.
-2. CỰC KỲ DỄ HIỂU CHO HỌC SINH CẤP 3: Dùng ngôn ngữ sư phạm trong sáng, ví dụ trực quan gần gũi, giúp học sinh nắm vững bản chất từ gốc rễ.
-3. CHUẨN XÁC KỸ THUẬT PYTHON: Giải thích chính xác bản chất bộ nhớ máy tính (chỉ số 0-based offset, cơ chế tuple packing/unpacking khi hoán đổi a, b = b, a, độ phức tạp Big-O, mutability của list vs immutability của string, bảng mã ASCII...).
-4. TRÌNH BÀY CHUYÊN NGHIỆP: Định dạng Markdown đẹp mắt, có gạch đầu dòng, bôi đậm từ khóa then chốt và kèm khối code Python ngắn gọn có chú thích rõ ràng.
+2. TẦM NHÌN TOÀN DIỆN MỌI BÀI HỌC (THPT): Học sinh có thể đặt câu hỏi TỔNG THỂ TẤT CẢ CÁC BÀI HỌC trong chương trình (Bubble Sort, Selection Sort, Insertion Sort, Quick Sort, Merge Sort, Linear Search, Binary Search, Xâu ký tự & mã ASCII, cú pháp Python, bài tập tự do, mẹo thi THPT). Hãy tự do so sánh giữa các thuật toán và giải thích tổng quan toàn diện, không được tự giới hạn mình chỉ trong bài học hiện tại trừ khi học sinh yêu cầu cụ thể bài đó.
+3. CỰC KỲ DỄ HIỂU CHO HỌC SINH CẤP 3: Dùng ngôn ngữ sư phạm trong sáng, ví dụ trực quan gần gũi, giúp học sinh nắm vững bản chất từ gốc rễ.
+4. CHUẨN XÁC KỸ THUẬT PYTHON: Giải thích chính xác bản chất bộ nhớ máy tính (chỉ số 0-based offset, cơ chế tuple packing/unpacking khi hoán đổi a, b = b, a, độ phức tạp Big-O, mutability của list vs immutability của string, bảng mã ASCII...).
+5. TRÌNH BÀY CHUYÊN NGHIỆP: Định dạng Markdown đẹp mắt, có gạch đầu dòng, bảng biểu so sánh nếu cần, bôi đậm từ khóa then chốt và kèm khối code Python ngắn gọn có chú thích rõ ràng.
 
-Thông tin bài toán hiện tại:
-- Tên thuật toán: "${algorithmName}" (Mã: ${algorithmId})
+Thông tin ngữ cảnh phòng lab (đang mở bài học: "${algorithmName}" - mã ${algorithmId}):
 - Dữ liệu đầu vào: ${stdinInput || '(Mặc định)'}
-- Đoạn mã Python học sinh đang học:
+- Đoạn mã Python hiện tại trên màn hình:
 \`\`\`python
 ${code || '# Chưa có code'}
 \`\`\`

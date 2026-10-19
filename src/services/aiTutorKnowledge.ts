@@ -290,3 +290,118 @@ Thuật toán của bạn đang xử lý một danh sách số nguyên. Trong Ti
     ],
   };
 }
+
+/**
+ * Kho kiến thức Sư phạm Tổng Thể Toàn Bộ Chương Trình Tin Học THPT
+ * Dành cho chế độ hỏi đáp tổng hợp đa bài học
+ */
+export const CURRICULUM_OVERVIEW = {
+  matrix: `📊 **BẢNG TỔNG HỢP SO SÁNH TẤT CẢ CÁC THUẬT TOÁN THPT (CHUYÊN ĐỀ SẮP XẾP & TÌM KIẾM)**
+
+| Thuật toán | Cơ chế cốt lõi | Best Case | Avg Case | Worst Case | Bộ nhớ phụ | Tính ổn định | Số lần Hoán đổi (Swap) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Bubble Sort** (Nổi bọt) | So sánh cặp kề nhau, dồn số lớn về cuối | **$O(n)$** *(có cờ swapped)* | $O(n^2)$ | $O(n^2)$ | $O(1)$ | **Ổn định** (Stable) | Nhiều nhất (tối đa $\\approx n^2/2$) |
+| **Selection Sort** (Chọn) | Quét tìm phần tử nhỏ nhất đưa về đầu | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ | $O(1)$ | **Không ổn định** | **Ít nhất** (đúng $n - 1$ lần) |
+| **Insertion Sort** (Chèn) | Rút từng số chèn lùi vào vị trí thích hợp | **$O(n)$** *(khi gần có thứ tự)* | $O(n^2)$ | $O(n^2)$ | $O(1)$ | **Ổn định** (Stable) | Trung bình (thao tác dời chỗ) |
+| **Quick Sort** (Nhanh) | Phân hoạch mảng theo phần tử chốt (Pivot) | $O(n \\log n)$ | **$O(n \\log n)$** | $O(n^2)$ *(chọn pivot lệch)* | $O(\\log n)$ | **Không ổn định** | Trung bình, chạy thực tế nhanh nhất |
+| **Merge Sort** (Trộn) | Chia đôi đến 1 phần tử rồi trộn 2 mảng con | **$O(n \\log n)$** | **$O(n \\log n)$** | **$O(n \\log n)$** *(đảm bảo)* | $O(n)$ | **Ổn định** (Stable) | Không swap trực tiếp, chép mảng |
+| **Linear Search** (Tuần tự) | Quét từng phần tử từ đầu đến cuối | **$O(1)$** | $O(n)$ | $O(n)$ | $O(1)$ | — | Không yêu cầu mảng có thứ tự |
+| **Binary Search** (Nhị phân) | Chia đôi không gian tìm kiếm \`mid\` | **$O(1)$** | **$O(\\log n)$** | **$O(\\log n)$** | $O(1)$ | — | **Bắt buộc mảng đã sắp xếp** |
+| **String / ASCII Sort** | So sánh mã số ASCII của từng ký tự | Tùy thuật toán | Tùy thuật toán | Tùy thuật toán | $O(1)$ | Theo thuật toán | Xâu là Immutable, chuyển sang List |`,
+
+  roadmap: `🗺️ **BẢN ĐỒ LỘ TRÌNH HỌC THUẬT TOÁN & LẬP TRÌNH PYTHON THPT (LỚP 10, 11, 12)**
+
+### 📌 Chặng 1: Nền tảng Python & Thao tác Mảng 1 chiều (Cốt lõi Tin 10)
+- Nắm vững cú pháp cơ bản: Biến, Kiểu dữ liệu (\`int\`, \`float\`, \`str\`, \`list\`, \`bool\`).
+- Cơ chế chỉ số mảng bắt đầu từ **0** (Offset trong bộ nhớ RAM).
+- Vòng lặp \`for\` với hàm \`range(start, stop, step)\` (lưu ý cận \`stop\` luôn bị trừ đi 1).
+- Tránh 4 lỗi kinh điển: \`NameError\`, \`IndexError\`, \`TypeError\`, \`SyntaxError\`.
+
+### 📌 Chặng 2: Bộ ba Thuật toán Sắp xếp Cơ bản $O(n^2)$
+- **Bubble Sort**: Học cách tư duy so sánh cặp kề nhau và kỹ thuật cờ hiệu (\`swapped\`) để dừng sớm $O(n)$.
+- **Selection Sort**: Kỹ thuật tìm min/max trong đoạn con và tối ưu số lần hoán đổi ($n - 1$ lần).
+- **Insertion Sort**: Mô phỏng xếp bài Tây, cực kỳ hiệu quả khi dữ liệu đã gần ngăn nắp.
+- **Kỹ thuật Python đặc trưng**: Hoán đổi không biến tạm \`a, b = b, a\` (Tuple Packing & Unpacking).
+
+### 📌 Chặng 3: Thuật toán Tìm kiếm (Tuần tự vs Nhị phân)
+- **Linear Search**: Tìm kiếm linh hoạt trên mọi dữ liệu lộn xộn.
+- **Binary Search**: Cú pháp chia đôi thần tốc $O(\\log n)$, điều kiện tiên quyết mảng phải có thứ tự.
+
+### 📌 Chặng 4: Thuật toán Nâng cao & Chia để trị $O(n \\log n)$
+- **Quick Sort**: Ý tưởng phần tử chốt (Pivot), phân hoạch và đệ quy.
+- **Merge Sort**: Tư tưởng chia nhỏ rồi trộn (Merge), đảm bảo $O(n \\log n)$ mọi trường hợp.
+
+### 📌 Chặng 5: Ứng dụng Xâu ký tự & Bảng mã ASCII
+- Hàm \`ord()\` lấy mã số ASCII và \`chr()\` đổi số sang ký tự.
+- Xử lý bất biến (Immutability) của chuỗi trong Python bằng cách chuyển đổi qua lại với \`list\`.`,
+
+  bigo: `⚡ **BẢNG TRA CỨU ĐỘ PHỨC TẠP BIG-O TOÀN DIỆN CHO HỌC SINH THPT**
+
+Độ phức tạp thời gian Big-O là thước đo **tốc độ gia tăng số phép tính của máy tính khi số lượng dữ liệu $n$ tăng lên**:
+
+| Độ phức tạp | Tên gọi | Tốc độ | Số phép tính khi $n = 1.000$ | Số phép tính khi $n = 1.000.000$ | Ví dụ thực tế trong bài |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **$O(1)$** | Hằng số | Tức thì | **1** phép tính | **1** phép tính | Truy cập \`arr[0]\`, kiểm tra \`len()\`, gán biến |
+| **$O(\\log n)$** | Logarit | Siêu tốc | $\\approx$ **10** phép tính | $\\approx$ **20** phép tính | **Binary Search** (Tìm kiếm nhị phân chia đôi) |
+| **$O(n)$** | Tuyến tính | Nhanh | **1.000** phép tính | **1.000.000** phép tính | **Linear Search**, 1 vòng lặp \`for\`, Bubble Sort tốt nhất |
+| **$O(n \\log n)$** | Tuyến tính - Log | Tối ưu | $\\approx$ **10.000** phép tính | $\\approx$ **20.000.000** phép tính | **Quick Sort**, **Merge Sort**, hàm \`sorted()\` Python |
+| **$O(n^2)$** | Bậc hai | Rất chậm | **1.000.000** phép tính | **1.000.000.000.000** phép tính (Treo máy!) | 2 vòng lặp lồng nhau (Bubble, Selection, Insertion) |
+
+💡 **Quy tắc làm bài thi nhanh:**
+- 1 vòng lặp \`for i in range(n)\` không lồng $\\to O(n)$.
+- 2 vòng lặp \`for\` lồng nhau $\\to O(n^2)$.
+- Mỗi lần lặp chia đôi không gian tìm kiếm $\\to O(\\log n)$.`,
+
+  examTraps: `🎯 **BỘ 10 BẪY ĐỀ THI TRẮC NGHIỆM TIN HỌC THPT HAY GẶP NHẤT TRONG TẤT CẢ CÁC BÀI**
+
+1. ⚠️ **Bẫy điều kiện Binary Search:**
+   - Đề hỏi: *"Cho mảng [9, 2, 7, 1, 5], tìm số 7 bằng Binary Search tốn mấy bước?"*
+   - **Bẫy:** Mảng CHƯA sắp xếp nên KHÔNG được dùng Binary Search! Nếu cố tình chạy sẽ ra kết quả sai hoàn toàn.
+
+2. ⚠️ **Bẫy số lần hoán đổi ít nhất:**
+   - Đề hỏi: *"Thuật toán nào có số lần hoán đổi ít nhất?"* $\\to$ Đáp án là **Selection Sort** (tối đa chỉ đúng $n - 1$ lần hoán đổi).
+
+3. ⚠️ **Bẫy tính ổn định (Stable Sort):**
+   - Thuật toán ỔN ĐỊNH: **Bubble Sort, Insertion Sort, Merge Sort**.
+   - Thuật toán KHÔNG ỔN ĐỊNH: **Selection Sort, Quick Sort**.
+
+4. ⚠️ **Bẫy Best-case của Bubble Sort:**
+   - Chỉ đạt $O(n)$ khi có **biến cờ kiểm tra (swapped)** kết hợp \`break\`. Nếu không có cờ, Bubble Sort ngây thơ vẫn chạy $O(n^2)$!
+
+5. ⚠️ **Bẫy cận vòng lặp trong Bubble Sort:**
+   - Luôn là \`range(0, n - i - 1)\`. Viết nhầm \`range(n)\` sẽ gây lỗi \`IndexError: list index out of range\` khi truy cập \`arr[j + 1]\`.
+
+6. ⚠️ **Bẫy so sánh xâu ký tự:**
+   - \`"10" < "2"\` là **True** vì so sánh theo mã ASCII của ký tự đầu: \`'1'\` (mã 49) nhỏ hơn \`'2'\` (mã 50).
+
+7. ⚠️ **Bẫy chữ hoa và chữ thường trong bảng mã ASCII:**
+   - Trong ASCII, chữ hoa ('A'-'Z': 65..90) đứng TRƯỚC chữ thường ('a'-'z': 97..122). Do đó \`'Z' < 'a'\` là **True**!
+
+8. ⚠️ **Bẫy lệnh chèn Insertion Sort:**
+   - Sau khi kết thúc vòng lặp \`while\`, giá trị của $j$ đã bị trừ lùi 1 nấc, vì vậy lệnh chèn đúng luôn là \`arr[j + 1] = key\` chứ không phải \`arr[j] = key\`.
+
+9. ⚠️ **Bẫy phép chia chỉ số mảng:**
+   - Chỉ số mảng bắt buộc là số nguyên (\`int\`). Phải dùng phép chia nguyên \`//\` (ví dụ: \`mid = (left + right) // 2\`). Nếu dùng \`/\` sẽ bị lỗi \`TypeError\`.
+
+10. ⚠️ **Bẫy gõ nhầm biến chưa khai báo (NameError):**
+    - Viết \`tota\` thay cho \`total\`, \`resul\` thay cho \`result\`, \`user_dat\` thay cho \`user_data\`, hoặc dùng \`+=\` trước khi gán giá trị khởi tạo \`= 0\`.`,
+};
+
+/**
+ * Trả về nội dung giải thích tổng thể toàn bộ chương trình theo chủ đề
+ */
+export function getCurriculumOverview(topic: 'matrix' | 'roadmap' | 'bigo' | 'exam_traps'): string {
+  switch (topic) {
+    case 'matrix':
+      return CURRICULUM_OVERVIEW.matrix;
+    case 'roadmap':
+      return CURRICULUM_OVERVIEW.roadmap;
+    case 'bigo':
+      return CURRICULUM_OVERVIEW.bigo;
+    case 'exam_traps':
+      return CURRICULUM_OVERVIEW.examTraps;
+    default:
+      return CURRICULUM_OVERVIEW.matrix;
+  }
+}
+

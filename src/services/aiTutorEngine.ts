@@ -9,7 +9,7 @@
  */
 
 import { TraceStep } from '../types';
-import { getHighSchoolPedagogy, AlgorithmPedagogy } from './aiTutorKnowledge';
+import { getHighSchoolPedagogy, AlgorithmPedagogy, CURRICULUM_OVERVIEW, getCurriculumOverview } from './aiTutorKnowledge';
 import { lintPythonCode, autoFixPythonCode, PYTHON_KEYWORDS } from './pythonLinter';
 
 export interface TutorResponse {
@@ -20,6 +20,9 @@ export interface TutorResponse {
 
 /**
  * Trả lời câu hỏi bất kỳ của học sinh với tư cách Chuyên gia Lập trình cấp cao Python
+ * Hỗ trợ cả 2 chế độ:
+ * - scope: 'all' -> Trả lời tổng thể bao quát toàn bộ chương trình Tin học THPT (tất cả các bài)
+ * - scope: 'current' -> Trọng tâm đào sâu riêng bài học đang xem
  */
 export function answerStudentQuestion(params: {
   question: string;
@@ -28,8 +31,9 @@ export function answerStudentQuestion(params: {
   code: string;
   currentStep?: TraceStep;
   stdinInput?: string;
+  scope?: 'all' | 'current';
 }): string {
-  const { question, algorithmId, algorithmTitle = 'Thuật toán', code, currentStep } = params;
+  const { question, algorithmId, algorithmTitle = 'Thuật toán', code, currentStep, scope = 'all' } = params;
   const rawQ = question.trim();
   const q = rawQ.toLowerCase().replace(/[?!.,;:_]/g, ' ');
   const pedagogy = getHighSchoolPedagogy(algorithmId);
@@ -288,12 +292,142 @@ export function answerStudentQuestion(params: {
   }
 
   // =========================================================================
-  // 8. SO SÁNH BUBBLE SORT VS SELECTION SORT VS INSERTION SORT
+  // 8. CÂU HỎI TỔNG THỂ TẤT CẢ CÁC BÀI & BẢNG SO SÁNH MA TRẬN THUẬT TOÁN THPT
+  // =========================================================================
+  const isAllAlgorithmsMatrixQuery =
+    q.includes('tất cả các bài') ||
+    q.includes('tổng thể') ||
+    q.includes('tất cả thuật toán') ||
+    q.includes('toàn bộ thuật toán') ||
+    q.includes('so sánh tất cả') ||
+    q.includes('bảng so sánh') ||
+    q.includes('ma trận') ||
+    q.includes('các thuật toán sắp xếp') ||
+    (q.includes('so sánh') && (q.includes('sắp xếp') || q.includes('thuật toán')));
+
+  if (isAllAlgorithmsMatrixQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: BẢNG TỔNG HỢP SO SÁNH TOÀN DIỆN TẤT CẢ CÁC THUẬT TOÁN THPT**\n\n` +
+      `Thầy/Cô chuyên gia lập trình cấp cao tổng hợp bức tranh toàn cảnh để bạn nắm chắc kiến thức và tự tin làm bài thi:\n\n` +
+      `${CURRICULUM_OVERVIEW.matrix}\n\n` +
+      `💡 **Mẹo làm bài thi THPT nhanh nhất:**\n` +
+      `- **Muốn hoán đổi ít nhất:** Chọn **Selection Sort** ($n-1$ lần swap).\n` +
+      `- **Mảng gần như đã có thứ tự:** Chọn **Insertion Sort** hoặc **Bubble Sort có cờ swapped** (chạy tức thì $O(n)$).\n` +
+      `- **Dữ liệu cực lớn ($n > 100.000$):** Chọn **Quick Sort** hoặc **Merge Sort** ($O(n \\log n)$).\n` +
+      `- **Cần tính ổn định (giữ nguyên thứ tự phần tử bằng nhau):** Chọn **Bubble Sort, Insertion Sort, Merge Sort**.\n` +
+      `- **Tìm kiếm nhanh nhất:** Chọn **Binary Search** ($O(\\log n)$), nhưng bắt buộc mảng phải sắp xếp trước!`;
+  }
+
+  // =========================================================================
+  // 8.1 SO SÁNH TÌM KIẾM TUẦN TỰ (LINEAR SEARCH) VÀ TÌM KIẾM NHỊ PHÂN (BINARY SEARCH)
+  // =========================================================================
+  const isSearchComparisonQuery =
+    (q.includes('tìm kiếm') && (q.includes('so sánh') || q.includes('phân biệt') || q.includes('khác nhau'))) ||
+    (q.includes('nhị phân') && q.includes('tuần tự')) ||
+    (q.includes('binary') && q.includes('linear')) ||
+    q.includes('khi nào dùng binary search') ||
+    q.includes('khi nào dùng tìm kiếm nhị phân');
+
+  if (isSearchComparisonQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: SO SÁNH TÌM KIẾM TUẦN TỰ (LINEAR) VÀ TÌM KIẾM NHỊ PHÂN (BINARY)**\n\n` +
+      `| Tiêu chí | Tìm kiếm Tuần tự (Linear Search) | Tìm kiếm Nhị phân (Binary Search) |\n` +
+      `| :--- | :--- | :--- |\n` +
+      `| **Nguyên lý** | Duyệt lần lượt từ đầu đến cuối mảng | Mở ở vị trí chính giữa (\`mid\`), loại bỏ 50% mảng sau mỗi lần chia |\n` +
+      `| **Điều kiện tiên quyết** | **Không cần sắp xếp** (áp dụng cho mọi mảng lộn xộn) | **BẮT BUỘC MẢNG ĐÃ SẮP XẾP** theo thứ tự tăng hoặc giảm |\n` +
+      `| **Thời gian Best Case** | **$O(1)$** (khi phần tử cần tìm nằm ngay đầu \`arr[0]\`) | **$O(1)$** (khi phần tử cần tìm nằm đúng ở giữa \`arr[mid]\`) |\n` +
+      `| **Thời gian Worst Case** | **$O(n)$** (phải duyệt hết mảng nếu ở cuối hoặc không có) | **$O(\\log n)$** (siêu tốc, chia đôi liên tục) |\n` +
+      `| **Hiệu năng khi $n = 1.000.000$** | Mất tối đa **1.000.000 phép so sánh** | Chỉ mất tối đa **20 phép so sánh**! |\n` +
+      `| **Khi nào nên sử dụng?** | Khi mảng nhỏ ($n < 100$) hoặc mảng chưa có thứ tự | Khi mảng lớn và đã được sắp xếp sẵn |\n\n` +
+      `⚠️ **Bẫy đề thi trắc nghiệm kinh điển:** Đề thi cho một mảng số lộn xộn và hỏi *"Tìm kiếm nhị phân phần tử X mất bao nhiêu bước?"* $\\to$ Đáp án bẫy: **Không áp dụng được Binary Search vì mảng chưa sắp xếp!**`;
+  }
+
+  // =========================================================================
+  // 8.2 LỘ TRÌNH VÀ BẢN ĐỒ HỌC THUẬT TOÁN THPT
+  // =========================================================================
+  const isRoadmapQuery =
+    q.includes('lộ trình') ||
+    q.includes('bản đồ') ||
+    q.includes('thứ tự học') ||
+    q.includes('nên học bài nào trước') ||
+    q.includes('chương trình thpt');
+
+  if (isRoadmapQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: BẢN ĐỒ LỘ TRÌNH HỌC THUẬT TOÁN TIN HỌC THPT**\n\n` +
+      `${CURRICULUM_OVERVIEW.roadmap}`;
+  }
+
+  // =========================================================================
+  // 8.3 BỘ BẪY ĐỀ THI TRẮC NGHIỆM TỔNG THỂ TẤT CẢ CÁC BÀI
+  // =========================================================================
+  const isGeneralExamTrapsQuery =
+    (q.includes('bẫy') && (q.includes('tất cả') || q.includes('đề thi') || q.includes('trắc nghiệm') || q.includes('các bài'))) ||
+    q.includes('bẫy đề thi thpt') ||
+    q.includes('các bẫy hay gặp');
+
+  if (isGeneralExamTrapsQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: 10 BẪY ĐỀ THI TRẮC NGHIỆM TIN HỌC THPT HAY GẶP NHẤT**\n\n` +
+      `${CURRICULUM_OVERVIEW.examTraps}`;
+  }
+
+  // =========================================================================
+  // 8.4 HỎI RIÊNG VỀ MỘT THUẬT TOÁN BẤT KỲ (Bất chấp bài đang mở là bài nào)
+  // =========================================================================
+  const isAskingSelectionSort = (q.includes('selection sort') || q.includes('sắp xếp chọn')) && !q.includes('bubble');
+  const isAskingInsertionSort = (q.includes('insertion sort') || q.includes('sắp xếp chèn')) && !q.includes('bubble');
+  const isAskingBinarySearch = (q.includes('binary search') || q.includes('nhị phân')) && !q.includes('tuần tự');
+  const isAskingLinearSearch = (q.includes('linear search') || q.includes('tuần tự') || q.includes('tuyến tính')) && !q.includes('nhị phân');
+  const isAskingMergeSort = q.includes('merge sort') || (q.includes('sắp xếp trộn') && !q.includes('quick'));
+
+  if (isAskingSelectionSort) {
+    const selPed = getHighSchoolPedagogy('selection-sort');
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM VỀ THUẬT TOÁN SELECTION SORT (SẮP XẾP CHỌN):**\n\n` +
+      `### 1. Ý tưởng đời sống:\n${selPed.realLifeAnalogy}\n\n` +
+      `### 2. Mổ xẻ từng dòng code Python:\n${selPed.codeBreakdown}\n\n` +
+      `### 3. Độ phức tạp Big-O & Bẫy đề thi:\n${selPed.complexityExplanation}\n\n` +
+      `💡 **Mẹo thi THPT:** ${selPed.examTipsAndTraps}`;
+  }
+
+  if (isAskingInsertionSort) {
+    const insPed = getHighSchoolPedagogy('insertion-sort');
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM VỀ THUẬT TOÁN INSERTION SORT (SẮP XẾP CHÈN):**\n\n` +
+      `### 1. Ý tưởng xếp bài Tây:\n${insPed.realLifeAnalogy}\n\n` +
+      `### 2. Mổ xẻ từng dòng code Python:\n${insPed.codeBreakdown}\n\n` +
+      `### 3. Độ phức tạp Big-O & Điểm mạnh:\n${insPed.complexityExplanation}\n\n` +
+      `💡 **Mẹo thi THPT:** ${insPed.examTipsAndTraps}`;
+  }
+
+  if (isAskingBinarySearch) {
+    const binPed = getHighSchoolPedagogy('binary-search');
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM VỀ THUẬT TOÁN TÌM KIẾM NHỊ PHÂN (BINARY SEARCH):**\n\n` +
+      `### 1. Ý tưởng lật từ điển chia đôi:\n${binPed.realLifeAnalogy}\n\n` +
+      `### 2. Mổ xẻ từng dòng code Python:\n${binPed.codeBreakdown}\n\n` +
+      `### 3. Hiệu năng siêu tốc O(log n):\n${binPed.complexityExplanation}\n\n` +
+      `⚠️ **Điều kiện sống còn:** ${binPed.examTipsAndTraps}`;
+  }
+
+  if (isAskingLinearSearch) {
+    const linPed = getHighSchoolPedagogy('linear-search');
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM VỀ THUẬT TOÁN TÌM KIẾM TUẦN TỰ (LINEAR SEARCH):**\n\n` +
+      `### 1. Ý tưởng đời sống:\n${linPed.realLifeAnalogy}\n\n` +
+      `### 2. Mổ xẻ từng dòng code Python:\n${linPed.codeBreakdown}\n\n` +
+      `### 3. Độ phức tạp Big-O:\n${linPed.complexityExplanation}\n\n` +
+      `💡 **Mẹo làm bài thi:** ${linPed.examTipsAndTraps}`;
+  }
+
+  if (isAskingMergeSort) {
+    const mergePed = getHighSchoolPedagogy('merge-sort');
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM VỀ THUẬT TOÁN MERGE SORT (SẮP XẾP TRỘN):**\n\n` +
+      `### 1. Ý tưởng Chia để trị & Trộn mảng:\n${mergePed.realLifeAnalogy}\n\n` +
+      `### 2. Mổ xẻ logic code Python:\n${mergePed.codeBreakdown}\n\n` +
+      `### 3. Tính ổn định và độ phức tạp O(n log n):\n${mergePed.complexityExplanation}\n\n` +
+      `💡 **Mẹo làm bài thi:** ${mergePed.examTipsAndTraps}`;
+  }
+
+  // =========================================================================
+  // 8.5 SO SÁNH 3 THUẬT TOÁN SẮP XẾP CƠ BẢN (BUBBLE, SELECTION, INSERTION)
   // =========================================================================
   const isComparisonQuery =
     q.includes('phân biệt') ||
     q.includes('khác nhau giữa') ||
-    q.includes('so sánh') ||
     (q.includes('bubble') && q.includes('selection')) ||
     (q.includes('insertion') && q.includes('selection'));
 
@@ -351,6 +485,134 @@ export function answerStudentQuestion(params: {
   }
 
   // =========================================================================
+  // 10.1 THUẬT TOÁN NÀO CHẠY NHANH NHẤT & KHI NÀO DÙNG THUẬT TOÁN NÀO?
+  // =========================================================================
+  const isFastestAlgorithmQuery =
+    q.includes('nhanh nhất') ||
+    q.includes('tốc độ cao nhất') ||
+    q.includes('thuật toán tối ưu nhất') ||
+    (q.includes('chạy') && q.includes('nhanh'));
+
+  if (isFastestAlgorithmQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: THUẬT TOÁN NÀO CHẠY NHANH NHẤT TRONG TẤT CẢ CÁC BÀI?**\n\n` +
+      `Thầy/Cô phân tích dựa trên 2 bài toán lớn trong chương trình THPT:\n\n` +
+      `### 1. Đối với Bài toán Tìm kiếm:\n` +
+      `- **Nhanh nhất vô địch:** **Binary Search (Tìm kiếm nhị phân)** đạt tốc độ siêu tốc **$O(\\log n)$**.\n` +
+      `  * Với mảng 1 triệu phần tử, Linear Search phải duyệt tối đa 1.000.000 bước, trong khi Binary Search chỉ mất tối đa **20 phép chia đôi**!\n` +
+      `  * *Lưu ý sống còn:* Binary Search bắt buộc mảng phải sắp xếp trước.\n\n` +
+      `### 2. Đối với Bài toán Sắp xếp:\n` +
+      `- **Dữ liệu lớn bất kỳ ($n > 10.000$):** **Quick Sort** và **Merge Sort** chạy nhanh nhất với độ phức tạp **$O(n \\log n)$**.\n` +
+      `  * Quick Sort chạy nhanh nhất trong thực tế nhờ bộ nhớ cache CPU và in-place partition.\n` +
+      `  * Merge Sort ổn định và luôn đảm bảo $O(n \\log n)$ không bao giờ bị rơi vào trường hợp xấu.\n` +
+      `- **Dữ liệu nhỏ ($n < 30$) hoặc mảng gần như đã sắp xếp:** **Insertion Sort** chạy nhanh nhất ($O(n)$) vì không tốn chi phí gọi hàm đệ quy.\n` +
+      `- **Dữ liệu có miền giá trị nhỏ ($0 \\le a_i \\le K$ với $K$ nhỏ):** **Counting Sort (Đếm phân phối)** đạt tốc độ thần tốc tuyến tính **$O(n + K)$**!`;
+  }
+
+  // =========================================================================
+  // 10.2 KHI NÀO NÊN DÙNG THUẬT TOÁN NÀO? (HƯỚNG DẪN CHỌN THUẬT TOÁN THPT)
+  // =========================================================================
+  const isWhenToUseQuery =
+    q.includes('khi nào nên dùng') ||
+    q.includes('khi nào dùng') ||
+    q.includes('chọn thuật toán') ||
+    q.includes('lựa chọn thuật toán');
+
+  if (isWhenToUseQuery) {
+    return `🎯 **BÍ QUYẾT CHỌN THUẬT TOÁN TỐI ƯU TRONG MỌI BÀI THI TIN HỌC THPT:**\n\n` +
+      `| Tình huống thực tế / Đề bài | Thuật toán nên chọn | Lý do chọn |\n` +
+      `| :--- | :--- | :--- |\n` +
+      `| **Mảng nhỏ ($n \\le 1.000$) hoặc lập trình nhanh** | **Bubble Sort / Insertion Sort** | Cực kỳ dễ nhớ, chỉ 4-5 dòng code |\n` +
+      `| **Cần số lần hoán đổi ít nhất** | **Selection Sort** | Tối đa đúng $n - 1$ lần swap |\n` +
+      `| **Mảng đã gần có thứ tự sẵn** | **Insertion Sort** | Chạy thần tốc $O(n)$, không tốn bộ nhớ |\n` +
+      `| **Cần giữ nguyên thứ tự điểm số bằng nhau** | **Bubble Sort, Insertion Sort, Merge Sort** | Có tính ổn định (Stable Sort) |\n` +
+      `| **Dữ liệu lớn ($n \\ge 100.000$)** | **Quick Sort / Merge Sort / \`sorted()\`** | Tối ưu thời gian $O(n \\log n)$ |\n` +
+      `| **Mảng lộn xộn cần tìm một số** | **Linear Search** | Dùng được ngay không cần sắp xếp trước |\n` +
+      `| **Mảng đã sắp xếp cần tìm siêu tốc** | **Binary Search** | Tốc độ $O(\\log n)$, chia đôi liên tục |`;
+  }
+
+  // =========================================================================
+  // 10.3 HÀM INPUT() VÀ CÁCH NHẬP NHIỀU SỐ TRÊN MỘT DÒNG
+  // =========================================================================
+  const isInputSplitQuery =
+    q.includes('input()') ||
+    q.includes('nhập mảng') ||
+    q.includes('map(int') ||
+    q.includes('nhập dữ liệu') ||
+    q.includes('input().split');
+
+  if (isInputSplitQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: CÁCH NHẬP DỮ LIỆU TỪ BÀN PHÍM CHUẨN ĐỀ THI TIN HỌC THPT**\n\n` +
+      `### 1. Cú pháp kinh điển nhập một dãy số cách nhau bởi dấu cách:\n` +
+      `\`\`\`python\n` +
+      `arr = list(map(int, input().split()))\n` +
+      `\`\`\`\n\n` +
+      `### 2. Mổ xẻ cơ chế hoạt động từng thành phần:\n` +
+      `1. \`input()\`: Đọc toàn bộ dòng học sinh nhập vào dưới dạng một chuỗi duy nhất (str).\n` +
+      `2. \`.split()\`: Tự động cắt chuỗi thành danh sách các chuỗi con tại mọi khoảng trắng: \`['5', '2', '9']\`.\n` +
+      `3. \`map(int, ...)\`: Ép kiểu từng chuỗi con thành số nguyên \`int\` (để có thể cộng trừ so sánh).\n` +
+      `4. \`list(...)\`: Đóng gói toàn bộ thành danh sách Python \`[5, 2, 9]\` hoàn chỉnh!\n\n` +
+      `💡 **Mẹo nhập 2 biến trên 1 dòng (ví dụ n và k):** \`n, k = map(int, input().split())\`.`;
+  }
+
+  // =========================================================================
+  // 10.4 PHÂN BIỆT HÀM sort() VÀ sorted() TRONG PYTHON
+  // =========================================================================
+  const isSortVsSortedQuery =
+    (q.includes('sort') && q.includes('sorted')) ||
+    q.includes('khác nhau giữa sort') ||
+    q.includes('list.sort');
+
+  if (isSortVsSortedQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: PHÂN BIỆT \`arr.sort()\` VÀ \`sorted(arr)\` TRONG PYTHON**\n\n` +
+      `| Tiêu chí | Phương thức \`arr.sort()\` | Hàm toàn cục \`sorted(arr)\` |\n` +
+      `| :--- | :--- | :--- |\n` +
+      `| **Cơ chế** | Sắp xếp **trực tiếp tại chỗ (In-Place)** trên mảng gốc | Tạo và trả về một **danh sách MỚI** đã sắp xếp |\n` +
+      `| **Giá trị trả về** | Trả về \`None\`! (Không được gán \`b = arr.sort()\`) | Trả về danh sách mới: \`b = sorted(arr)\` |\n` +
+      `| **Mảng gốc ban đầu** | **Bị thay đổi vĩnh viễn** | **Giữ nguyên 100%**, không bị biến đổi |\n` +
+      `| **Áp dụng cho kiểu dữ liệu** | Chỉ dùng riêng cho kiểu \`list\` | Dùng cho mọi kiểu lặp (tuple, str, dict...) |\n\n` +
+      `⚠️ **Bẫy học sinh hay mắc phải:** Viết \`arr = arr.sort()\` $\\to$ Biến \`arr\` bị biến thành \`None\` và mất sạch dữ liệu!`;
+  }
+
+  // =========================================================================
+  // 10.5 ĐỆ QUY (RECURSION) LÀ GÌ VÀ ỨNG DỤNG TRONG THUẬT TOÁN?
+  // =========================================================================
+  const isRecursionQuery =
+    q.includes('đệ quy') ||
+    q.includes('recursion') ||
+    q.includes('gọi lại chính nó');
+
+  if (isRecursionQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: BẢN CHẤT CỦA ĐỆ QUY (RECURSION) CHO HỌC SINH THPT**\n\n` +
+      `### 1. Đệ quy là gì?\n` +
+      `Đệ quy là kỹ thuật lập trình mà **một hàm tự gọi lại chính nó** với bài toán có kích thước nhỏ hơn.\n\n` +
+      `### 2. Hai thành phần BẮT BUỘC của mọi hàm đệ quy:\n` +
+      `1. **Điểm dừng (Base Case):** Điều kiện để hàm dừng lại, không gọi tiếp nữa. *Nếu quên điểm dừng, máy tính sẽ bị tràn ngăn xếp (RecursionError: maximum recursion depth exceeded)!*\n` +
+      `2. **Bước đệ quy (Recursive Step):** Gọi lại hàm với dữ liệu nhỏ hơn để tiến dần về điểm dừng.\n\n` +
+      `### 3. Ứng dụng trong thuật toán THPT:\n` +
+      `- **Quick Sort:** Sau khi chọn Pivot, đệ quy sắp xếp nửa bên trái và nửa bên phải.\n` +
+      `- **Merge Sort:** Đệ quy chia đôi mảng cho đến khi mảng chỉ còn 1 phần tử rồi trộn lại.\n` +
+      `- **Binary Search:** Đệ quy tìm kiếm trên nửa mảng còn lại.`;
+  }
+
+  // =========================================================================
+  // 10.6 PHÂN BIỆT VÒNG LẶP FOR VÀ WHILE
+  // =========================================================================
+  const isLoopComparisonQuery =
+    (q.includes('for') && q.includes('while')) ||
+    q.includes('khi nào dùng while') ||
+    q.includes('khi nào dùng for');
+
+  if (isLoopComparisonQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: KHI NÀO DÙNG VÒNG LẶP FOR VÀ KHI NÀO DÙNG WHILE?**\n\n` +
+      `- **Dùng \`for\`:** Khi bạn **biết trước số lần lặp** hoặc muốn **duyệt tuần tự qua một tập hợp** (mảng, xâu, range).\n` +
+      `  * Ví dụ: Duyệt qua $n$ phần tử trong mảng: \`for x in arr:\` hoặc \`for i in range(n):\`.\n` +
+      `- **Dùng \`while\`:** Khi bạn **chưa biết trước phải lặp bao nhiêu lần**, vòng lặp chạy phụ thuộc vào một **điều kiện logic**.\n` +
+      `  * Ví dụ: Vòng lặp dời phần tử trong Insertion Sort: \`while j >= 0 and arr[j] > key:\` (chừng nào chưa thỏa mãn thì lùi tiếp).\n` +
+      `  * Ví dụ: Vòng lặp chia đôi trong Binary Search: \`while left <= right:\`.\n\n` +
+      `⚠️ **Cảnh báo bẫy thi:** Dùng \`while\` phải luôn đảm bảo biến điều kiện được cập nhật (ví dụ \`j -= 1\`), nếu quên sẽ bị **vòng lặp vô tận (Infinite Loop)** làm treo chương trình!`;
+  }
+
+  // =========================================================================
   // 11. ĐỘ PHỨC TẠP BIG-O VÀ CÁC TRƯỜNG HỢP
   // =========================================================================
   const isComplexityQuery =
@@ -372,7 +634,7 @@ export function answerStudentQuestion(params: {
       `- **$O(n)$ (Tuyến tính):** Nhanh, mất đúng **1.000 phép tính** (Ví dụ: Tìm kiếm tuần tự, 1 vòng lặp \`for\`).\n` +
       `- **$O(n \\log n)$:** Tối ưu cho sắp xếp, mất khoảng **10.000 phép tính** (Merge Sort, Quick Sort).\n` +
       `- **$O(n^2)$ (Bậc hai):** Rất chậm, mất tới **1.000.000 phép tính** (Bubble Sort, Selection Sort với 2 vòng lặp lồng nhau)!\n\n` +
-      `### 2. Với thuật toán hiện tại (${pedagogy.name}):\n` +
+      `### 2. Chi tiết độ phức tạp thuật toán hiện tại:\n` +
       `${pedagogy.complexityExplanation}`;
   }
 
@@ -504,25 +766,55 @@ export function answerStudentQuestion(params: {
   }
 
   // =========================================================================
-  // 18. MẶC ĐỊNH THÔNG MINH: TRẢ LỜI TRỰC TIẾP DỰA TRÊN NGỮ CẢNH BÀI HỌC
+  // 18. MẶC ĐỊNH THÔNG MINH: TRẢ LỜI ĐÚNG TRỌNG TÂM THEO PHẠM VI (TỔNG THỂ HOẶC BÀI HỌC)
   // =========================================================================
+  if (scope === 'all' || algorithmId === 'custom-code') {
+    return `🎯 **TRẢ LỜI CHUYÊN GIA PYTHON CẤP CAO (TOÀN BỘ CHƯƠNG TRÌNH TIN HỌC THPT):**\n\n` +
+      `Bạn đang hỏi: *"${rawQ}"*\n\n` +
+      `Thầy/Cô chuyên gia giải đáp tổng thể cho bạn như sau:\n\n` +
+      `1. **Bức tranh tổng thể thuật toán THPT:**\n` +
+      `- Trong chương trình Tin học lớp 10, 11, 12, các bài toán trọng tâm gồm: **Sắp xếp** (Bubble, Selection, Insertion, Quick, Merge) và **Tìm kiếm** (Linear Search, Binary Search).\n` +
+      `- Tùy theo kích thước dữ liệu $n$ và đặc điểm mảng (đã sắp xếp hay chưa), ta chọn thuật toán tối ưu nhất giữa tốc độ ($O(n \\log n)$, $O(\\log n)$) và bộ nhớ phụ.\n\n` +
+      `2. **Nguyên tắc kỹ thuật lập trình Python cần nhớ:**\n` +
+      `- Chỉ số mảng luôn bắt đầu từ 0 (Base Offset trong bộ nhớ RAM).\n` +
+      `- Phép hoán đổi Python cực nhanh: \`a, b = b, a\` (Tuple Packing & Unpacking).\n` +
+      `- Tránh các lỗi kinh điển: \`NameError\` (biến chưa khai báo hoặc gõ sai tên), \`IndexError\` (vượt cận mảng), \`TypeError\` (so sánh nhầm str và int).\n\n` +
+      `💡 **Gợi ý tra cứu nhanh:** Bạn có thể bấm vào các nút phía trên (📊 **Bảng tổng hợp tất cả thuật toán**, ⚡ **Độ phức tạp Big-O**, 🎯 **10 Bẫy đề thi**) hoặc gõ bất kỳ câu hỏi nào về từng bài cụ thể nhé!`;
+  }
+
   return `🎯 **TRẢ LỜI CHUYÊN GIA PYTHON VỀ THUẬT TOÁN ${pedagogy.name.toUpperCase()}:**\n\n` +
     `Bạn đang hỏi: *"${rawQ}"*\n\n` +
     `Dưới góc độ lập trình viên Python cấp cao, thầy/cô giải thích cho bạn như sau:\n\n` +
     `1. **Nguyên lý cốt lõi:** ${pedagogy.realLifeAnalogy}\n\n` +
     `2. **Điểm cần lưu ý trong mã nguồn:**\n` +
     `${pedagogy.codeBreakdown.split('\n').slice(0, 5).join('\n')}\n\n` +
-    `💡 **Gợi ý hữu ích:** Bạn có thể bấm vào các thẻ câu hỏi gợi ý bên dưới (như *Tác dụng của biến cờ swapped?*, *Tại sao n - i - 1?*, *Cách sắp xếp giảm dần?*) để xem câu trả lời chi tiết và đúng trọng tâm nhất nhé!`;
+    `💡 **Gợi ý hữu ích:** Bạn có thể bấm vào các thẻ câu hỏi gợi ý bên dưới (như *Tác dụng của biến cờ swapped?*, *Tại sao n - i - 1?*, *Cách sắp xếp giảm dần?*) hoặc chuyển sang chế độ **"Toàn bộ chương trình (Tất cả các bài)"** để so sánh đa bài học nhé!`;
 }
 
 /**
  * Sinh giải thích theo chế độ sư phạm tức thì 0ms (Local Fast Engine)
+ * Hỗ trợ cả chế độ từng bài và chế độ tổng thể toàn bộ chương trình
  */
 export function getLocalPedagogyResponse(
-  mode: 'concept' | 'code_breakdown' | 'complexity' | 'exam_tips' | 'step_insight',
+  mode:
+    | 'concept'
+    | 'code_breakdown'
+    | 'complexity'
+    | 'exam_tips'
+    | 'step_insight'
+    | 'curriculum_matrix'
+    | 'curriculum_roadmap'
+    | 'curriculum_bigo'
+    | 'curriculum_exam_traps',
   algorithmId: string,
   currentStep?: TraceStep
 ): string {
+  // Các chế độ tổng thể toàn bộ chương trình THPT
+  if (mode === 'curriculum_matrix') return getCurriculumOverview('matrix');
+  if (mode === 'curriculum_roadmap') return getCurriculumOverview('roadmap');
+  if (mode === 'curriculum_bigo') return getCurriculumOverview('bigo');
+  if (mode === 'curriculum_exam_traps') return getCurriculumOverview('exam_traps');
+
   const pedagogy = getHighSchoolPedagogy(algorithmId);
 
   switch (mode) {

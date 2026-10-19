@@ -292,7 +292,7 @@ export default function App() {
         engine={engine}
         onChangeEngine={setEngine}
         pyodideReady={pyodideReady}
-        onOpenAiTutor={() => setActiveTab('ai-tutor')}
+        onOpenAiTutor={() => setActiveTab((prev) => (prev === 'ai-tutor' ? 'barchart' : 'ai-tutor'))}
         isAiTutorActive={activeTab === 'ai-tutor'}
       />
 
@@ -399,21 +399,6 @@ export default function App() {
                       {complexityReport.timeComplexity}
                     </span>
                   )}
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('ai-tutor')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    activeTab === 'ai-tutor'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm ring-1 ring-purple-300 font-bold'
-                      : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                  <span>Trợ Lí AI (THPT)</span>
-                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded hidden sm:inline">
-                    Tích hợp
-                  </span>
                 </button>
               </div>
             </div>
