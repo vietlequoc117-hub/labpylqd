@@ -84,12 +84,23 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
     }
   }
 
-  // Nếu không có list trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "PYTHON")
-  for (const name of preferredNames) {
+  // Nếu không có list trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "abcdefg", t = s[::2])
+  const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
+  for (const name of stringNames) {
     const varVal = vars[name];
     if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
-      if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+      if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+        return rawStr.split('');
+      }
+    }
+  }
+
+  for (const [k, varVal] of Object.entries(vars)) {
+    if (k.startsWith('_')) continue;
+    if (varVal && varVal.type === 'str') {
+      const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+      if (rawStr.length >= 1) {
         return rawStr.split('');
       }
     }
@@ -236,19 +247,47 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       }
     }
 
-    // Fallback nếu có xâu kí tự nguyên thủy
-    for (const name of preferredNames) {
+    // Fallback nếu có xâu kí tự nguyên thủy (s, t, xau, chuoi...)
+    const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
+    for (const name of stringNames) {
       const varVal = currentVars[name];
       if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
         const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
-        if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+        if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
           return { name, values: rawStr.split(''), elements: [] };
+        }
+      }
+    }
+
+    for (const [varName, varVal] of Object.entries(currentVars)) {
+      if (varName.startsWith('_')) continue;
+      if (varVal && varVal.type === 'str') {
+        const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+        if (rawStr.length >= 1) {
+          return { name: varName, values: rawStr.split(''), elements: [] };
         }
       }
     }
 
     return null;
   }, [currentStep, currentVars]);
+
+  // Danh sách tất cả các biến Xâu kí tự hiện có ở bước này (ví dụ: cả s và t = s[::2])
+  const allStringVars = useMemo(() => {
+    const list: { name: string; strValue: string; chars: string[] }[] = [];
+    for (const [k, v] of Object.entries(currentVars)) {
+      if (k.startsWith('_')) continue;
+      if (v && (v.type === 'str' || typeof v.value === 'string')) {
+        const raw = String(v.value).replace(/^['"]|['"]$/g, '');
+        if (v.type === 'str' || (raw.length >= 1 && isNaN(Number(raw)) && !raw.startsWith('['))) {
+          list.push({ name: k, strValue: raw, chars: raw.split('') });
+        }
+      }
+    }
+    return list;
+  }, [currentVars]);
+
+  const [selectedStrVarName, setSelectedStrVarName] = useState<string | null>(null);
 
   // Trích xuất i, j tại bước hiện tại
   const currentIndices = extractIndicesFromStep(currentStep);
@@ -310,9 +349,16 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     return snapshots;
   }, [allSteps]);
 
-  // Dữ liệu mảng thực tế từ quá trình chạy mã Python
-  const values: VisualItemValue[] = arrayData?.values || [];
-  const arrayName = arrayData?.name || 'arr';
+  // Dữ liệu mảng hoặc xâu thực tế từ quá trình chạy mã Python
+  const activeStringOverride = useMemo(() => {
+    if (!selectedStrVarName) return null;
+    return allStringVars.find((sv) => sv.name === selectedStrVarName) || null;
+  }, [selectedStrVarName, allStringVars]);
+
+  const values: VisualItemValue[] = activeStringOverride
+    ? activeStringOverride.chars
+    : arrayData?.values || [];
+  const arrayName = activeStringOverride ? activeStringOverride.name : arrayData?.name || 'arr';
   const hasArrayData = values.length > 0;
 
   // Kiểm tra kiểu dữ liệu: mảng số hay xâu kí tự
@@ -584,6 +630,81 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           Bước {currentStepIndex + 1}/{Math.max(1, totalSteps)}
         </div>
       </div>
+
+      {/* BẢNG TRỰC QUAN CÁC BIẾN XÂU KÍ TỰ (s, t = s[::2]...) */}
+      {allStringVars.length > 0 && (
+        <div
+          className={`px-4 py-2.5 border-b flex flex-col gap-2 ${
+            theme === 'light'
+              ? 'bg-amber-50/60 border-amber-200/80 text-slate-800'
+              : 'bg-amber-950/20 border-amber-900/40 text-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+              <Type className="w-3.5 h-3.5" />
+              <span>Trạng thái Xâu Kí Tự & Chỉ số Index (0 .. len-1):</span>
+            </div>
+            {allStringVars.length > 1 && (
+              <span className="text-[10px] text-amber-700 dark:text-amber-400">
+                Nhấp vào tên biến xâu để chuyển đổi biểu đồ cột bên dưới
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {allStringVars.map((sv) => {
+              const isSelected = arrayName === sv.name;
+              return (
+                <div
+                  key={sv.name}
+                  onClick={() => setSelectedStrVarName(sv.name)}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-white dark:bg-slate-900 border-amber-500 ring-1 ring-amber-400 shadow-xs'
+                      : 'bg-white/70 dark:bg-slate-900/50 border-slate-300 dark:border-slate-700 hover:border-amber-400'
+                  }`}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-xs text-indigo-600 dark:text-indigo-400">
+                        {sv.name}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">=</span>
+                      <span className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        "{sv.strValue}"
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        (len={sv.chars.length})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 overflow-x-auto">
+                    {sv.chars.map((ch, cIdx) => {
+                      const isEvenIdx = cIdx % 2 === 0;
+                      return (
+                        <div
+                          key={cIdx}
+                          className={`flex flex-col items-center min-w-[24px] px-1 py-0.5 rounded border text-center font-mono ${
+                            isEvenIdx && code.includes('[::2]')
+                              ? 'bg-amber-500/15 border-amber-400 text-amber-900 dark:text-amber-200 font-bold'
+                              : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+                          }`}
+                          title={`${sv.name}[${cIdx}] = '${ch}'`}
+                        >
+                          <span className="text-xs font-bold leading-tight">{ch}</span>
+                          <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-none border-t border-slate-200 dark:border-slate-700 w-full pt-0.5 mt-0.5">
+                            {cIdx}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* KHU VỰC VẼ BIỂU ĐỒ CỘT (CHÍNH XÁC & TỐI ƯU CẢ CHO SỐ VÀ XÂU KÍ TỰ) */}
       <div

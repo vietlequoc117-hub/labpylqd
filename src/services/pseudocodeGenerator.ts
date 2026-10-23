@@ -125,7 +125,7 @@ export function generatePseudocodeFromPython(pythonCode: string): PseudocodeLine
     if (!pseudoText && codePart.includes('input(')) {
       pseudoText = `Nhận dữ liệu từ bàn phím: ${codePart.replace('=', '←')}`;
     }
-    // 12. Standard assignments: var = val, var += val
+    // 12. Standard assignments: var = val, var += val (bao gồm cả xử lý Xâu kí tự & Slicing)
     if (!pseudoText) {
       if (codePart.includes(' += ')) {
         const [left, right] = codePart.split(' += ');
@@ -139,9 +139,25 @@ export function generatePseudocodeFromPython(pythonCode: string): PseudocodeLine
       } else if (codePart.includes(' /= ')) {
         const [left, right] = codePart.split(' /= ');
         pseudoText = `${left.trim()} ← ${left.trim()} / ${right.trim()}`;
-      } else if (codePart.includes(' = ') && !codePart.startsWith('if') && !codePart.startsWith('while')) {
-        const [left, right] = codePart.split(' = ');
-        pseudoText = `${left.trim()} ← ${right.trim()}`;
+      } else if (codePart.includes('=') && !codePart.startsWith('if') && !codePart.startsWith('while') && !codePart.startsWith('elif')) {
+        const eqIdx = codePart.indexOf('=');
+        const left = codePart.slice(0, eqIdx).trim();
+        const right = codePart.slice(eqIdx + 1).trim();
+        pseudoText = `${left} ← ${right}`;
+
+        if (!explanation) {
+          if (/\[1:\]\s*\+\s*\w+\[0\]/.test(right)) {
+            explanation = `Dịch vòng trái xâu: cắt từ vị trí 1 đến cuối ghép với kí tự đầu tiên [0] đưa xuống cuối`;
+          } else if (/\[::2\]/.test(right)) {
+            explanation = `Cắt xâu bước nhảy 2: trích các kí tự ở chỉ số chẵn (0, 2, 4, ...)`;
+          } else if (/\[::-1\]/.test(right)) {
+            explanation = `Đảo ngược toàn bộ xâu kí tự (bước nhảy -1 từ cuối về đầu)`;
+          } else if (/\[.*:.*\]/.test(right)) {
+            explanation = `Thực hiện phép cắt xâu / danh sách (Slicing) và gán cho ${left}`;
+          } else if (/^["'].*["']$/.test(right)) {
+            explanation = `Khởi tạo biến xâu kí tự ${left} = ${right}`;
+          }
+        }
       } else {
         pseudoText = codePart;
       }

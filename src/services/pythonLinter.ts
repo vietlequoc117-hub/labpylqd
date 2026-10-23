@@ -219,24 +219,129 @@ export const PYTHON_BUILTINS = new Set([
 ]);
 
 /**
- * Loại bỏ chuỗi ký tự ("..." hoặc '...') và comment (#...) để phân tích cú pháp an toàn
+ * Loại bỏ chuỗi ký tự ("..." hoặc '...') và comment (#...) một cách chính xác (Single-pass lexer):
+ * - Thay thế chuỗi thông thường bằng `""` (thay vì khoảng trắng) để sau khi `.trim()`, phép gán `s = "abcdefg"` trở thành `s = ""` (giữ nguyên vế phải khác rỗng, tránh lỗi nhận diện nhầm `s =` thiếu vế phải!).
+ * - Xử lý tiền tố chuỗi `f`, `r`, `b`, `u` (ví dụ `f"Kết quả: {t}"`) để không báo lỗi nhầm chữ `f` là biến chưa khai báo, đồng thời trích xuất biểu thức `{t}` bên trong f-string để kiểm tra biến hợp lệ.
+ * - Không cắt nhầm dấu `#` nằm bên trong chuỗi ký tự.
  */
 function stripStringsAndComments(line: string): string {
-  // Bỏ comment
-  let clean = line.replace(/#.*$/, '');
-  // Thay thế chuỗi kép và chuỗi đơn bằng khoảng trắng giữ nguyên độ dài
-  clean = clean.replace(/"(?:\\.|[^"\\])*"/g, (m) => ' '.repeat(m.length));
-  clean = clean.replace(/'(?:\\.|[^'\\])*'/g, (m) => ' '.repeat(m.length));
-  return clean;
+  let result = '';
+  let i = 0;
+  const n = line.length;
+
+  while (i < n) {
+    // 1. Nếu gặp dấu # ngoài chuỗi -> bỏ toàn bộ phần comment phía sau
+    if (line[i] === '#') {
+      break;
+    }
+
+    // 2. Kiểm tra tiền tố chuỗi (f, r, b, u, fr, rf, br, rb...) ngay trước dấu nháy
+    let isFString = false;
+    let prefixLen = 0;
+    if (/[fFrRbBuU]/.test(line[i]) && (i === 0 || !/[a-zA-Z0-9_]/.test(line[i - 1]))) {
+      if (i + 1 < n && (line[i + 1] === '"' || line[i + 1] === "'")) {
+        prefixLen = 1;
+        isFString = /[fF]/.test(line[i]);
+      } else if (
+        i + 2 < n &&
+        /[fFrRbBuU]/.test(line[i + 1]) &&
+        (line[i + 2] === '"' || line[i + 2] === "'")
+      ) {
+        prefixLen = 2;
+        isFString = /[fF]/.test(line[i]) || /[fF]/.test(line[i + 1]);
+      }
+    }
+
+    if (prefixLen > 0 || line[i] === '"' || line[i] === "'") {
+      i += prefixLen;
+      const quoteChar = line[i];
+      // Kiểm tra chuỗi 3 dấu nháy (""" hoặc ''')
+      const isTriple =
+        i + 2 < n && line[i + 1] === quoteChar && line[i + 2] === quoteChar;
+      const quoteToken = isTriple ? quoteChar.repeat(3) : quoteChar;
+      i += quoteToken.length;
+
+      let strContent = '';
+      while (i < n) {
+        if (line[i] === '\\') {
+          strContent += line.slice(i, i + 2);
+          i += 2;
+          continue;
+        }
+        if (isTriple) {
+          if (line.startsWith(quoteToken, i)) {
+            i += 3;
+            break;
+          }
+        } else {
+          if (line[i] === quoteChar) {
+            i += 1;
+            break;
+          }
+        }
+        strContent += line[i];
+        i++;
+      }
+
+      if (isFString && strContent.includes('{')) {
+        // Trích xuất các biểu thức {expr} trong f-string (bỏ phần định dạng :.2f hoặc !r)
+        const exprs: string[] = [];
+        const braceRegex = /\{([^{}]+)\}/g;
+        let m: RegExpExecArray | null;
+        while ((m = braceRegex.exec(strContent)) !== null) {
+          const rawExpr = m[1].split(/[:!]/)[0].trim();
+          if (rawExpr) exprs.push(`(${rawExpr})`);
+        }
+        result += exprs.length > 0 ? `"" + ${exprs.join(' + ')}` : '""';
+      } else {
+        result += '""';
+      }
+      continue;
+    }
+
+    result += line[i];
+    i++;
+  }
+
+  return result;
+}
+
+/**
+ * Kiểm tra chuỗi ký tự chưa đóng dấu nháy trên 1 dòng (bỏ qua phần # comment và xử lý đúng nháy lồng nhau như "It's")
+ */
+function checkUnterminatedStringOnLine(rawLine: string): { quote: "'" | '"'; col: number } | null {
+  if (rawLine.includes("'''") || rawLine.includes('"""')) return null;
+  let inQuote: "'" | '"' | null = null;
+  let quoteCol = -1;
+
+  for (let i = 0; i < rawLine.length; i++) {
+    const ch = rawLine[i];
+    if (ch === '\\') {
+      i++; // Bỏ qua ký tự được escape
+      continue;
+    }
+    if (!inQuote) {
+      if (ch === '#') break; // Gặp comment ngoài chuỗi -> dừng kiểm tra
+      if (ch === "'" || ch === '"') {
+        inQuote = ch;
+        quoteCol = i + 1;
+      }
+    } else if (ch === inQuote) {
+      inQuote = null;
+      quoteCol = -1;
+    }
+  }
+
+  return inQuote ? { quote: inQuote, col: quoteCol } : null;
 }
 
 /**
  * Chuyên gia phân tích cú pháp & ngữ nghĩa Python cấp cao (Senior Python Diagnostic Engine)
- * Phát hiện toàn diện 4 nhóm lỗi kinh điển của học sinh:
+ * Phát hiện toàn diện 4 nhóm lỗi kinh điển của học sinh (bao gồm cả mảng số và bài tập Xâu kí tự):
  * 1. Thiếu dấu (dấu hai chấm :, ngoặc (), [], {}, dấu nháy chuỗi, dấu phẩy giữa các phần tử)
  * 2. Từ khóa & Gõ sai (typo từ khóa, gõ nhầm true/false viết thường, null, 'o'/'O' thay cho số 0, 'l' thay cho số 1)
  * 3. Cú pháp & Thụt lề (IndentationError, toán tử C/JS như &&, ||, !, ++, nhầm = và ==, arr(i) thay vì arr[i])
- * 4. Ngữ nghĩa & Logic (Biến chưa khai báo NameError, chia float trong chỉ số mảng, chia cho 0, phương thức mảng sai .push/.add, hoán đổi ghi đè)
+ * 4. Ngữ nghĩa, Logic & Xâu kí tự (Biến chưa khai báo NameError, bất biến xâu s[0]='a', dùng dấu : trong range, dùng dấu , trong cắt xâu s[1,3], phương thức xâu sai .toUpperCase/.trim, chia float trong chỉ số mảng, chia cho 0, hoán đổi ghi đè)
  */
 export function lintPythonCode(code: string): LintResult {
   const errors: PythonLintError[] = [];
@@ -271,6 +376,7 @@ export function lintPythonCode(code: string): LintResult {
 
   // Theo dõi các biến và hàm đã được khai báo
   const declaredVariables = new Set<string>();
+  const stringVariables = new Set<string>();
   const definedFunctions: { name: string; line: number; params: string[] }[] = [];
 
   // Pre-pass: Thu thập trước toàn bộ hàm và biến được khai báo/gán trong code để tránh báo sai lỗi từ khóa/tên biến
@@ -282,29 +388,37 @@ export function lintPythonCode(code: string): LintResult {
     const dMatch = cleanL.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)/);
     if (dMatch) {
       const fnName = dMatch[1];
-      const params = dMatch[2].split(',').map((p) => p.trim()).filter(Boolean);
+      const params = dMatch[2]
+        .split(',')
+        .map((p) => p.split('=')[0].split(':')[0].replace(/\*/g, '').trim())
+        .filter(Boolean);
       definedFunctions.push({ name: fnName, line: idx + 1, params });
       declaredVariables.add(fnName);
       params.forEach((p) => declaredVariables.add(p));
     }
 
-    // For
-    const fMatch = cleanL.match(/^for\s+([^:]+)\s+in\s+/);
-    if (fMatch) {
+    // For (bao gồm cả vòng lặp for đầu dòng và list/generator comprehension `for x in ...`)
+    const forRegexGlobal = /\bfor\s+([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*|\([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*\))\s+in\b/g;
+    let fMatch: RegExpExecArray | null;
+    while ((fMatch = forRegexGlobal.exec(cleanL)) !== null) {
       fMatch[1].replace(/[()]/g, '').split(',').forEach((v) => {
         const cleaned = v.trim();
         if (/^[a-zA-Z_]\w*$/.test(cleaned)) declaredVariables.add(cleaned);
       });
     }
 
-    // Assignment (raw = ..., parts = ..., arr = ..., matrix = ..., target = ..., vi_tri = ...)
-    const aMatch = cleanL.match(/^([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*(\+=|-=|\*=|\/=|%=|=)/);
-    if (aMatch && !/^(if|elif|while)/.test(cleanL)) {
+    // Assignment (s = "abcdefg", t = s[::2], a, b = ..., a = b = ...)
+    const aMatch = cleanL.match(/^\(?([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\)?\s*(?:\+=|-=|\*=|\/=|\/\/=|%=|\*\*=|=(?!=))/);
+    if (aMatch && !/^(if|elif|while|return|assert)\b/.test(cleanL)) {
       aMatch[1].split(',').forEach((v) => {
         const cleaned = v.trim();
         if (/^[a-zA-Z_]\w*$/.test(cleaned)) declaredVariables.add(cleaned);
       });
     }
+
+    // with ... as var / except ... as var
+    const asMatch = cleanL.match(/\bas\s+([a-zA-Z_]\w*)/);
+    if (asMatch) declaredVariables.add(asMatch[1]);
 
     // Import
     const impMatch = cleanL.match(/^(?:import|from)\s+([a-zA-Z_]\w*)/);
@@ -409,7 +523,7 @@ export function lintPythonCode(code: string): LintResult {
             category: 'symbol',
             rule: 'missing-colon',
             message: `Dòng ${lineNum}: Thiếu dấu hai chấm ":" ở cuối ${item.name}.`,
-            suggestion: `${trimmedClean}:`,
+            suggestion: `${rawLine.replace(/#.*$/, '').trimEnd()}:`,
             fixable: true,
           });
         }
@@ -417,30 +531,17 @@ export function lintPythonCode(code: string): LintResult {
     }
 
     // 1.3 Thiếu dấu đóng chuỗi (Unterminated string literal)
-    const quoteCountSingle = (rawLine.match(/(?<!\\)'/g) || []).length;
-    const quoteCountDouble = (rawLine.match(/(?<!\\)"/g) || []).length;
-    if (quoteCountSingle % 2 !== 0 && !rawLine.includes("'''")) {
+    const unclosedStr = checkUnterminatedStringOnLine(rawLine);
+    if (unclosedStr) {
       errors.push({
-        id: `unterminated-string-single-${lineNum}`,
+        id: `unterminated-string-${unclosedStr.quote === "'" ? 'single' : 'double'}-${lineNum}`,
         line: lineNum,
-        column: rawLine.lastIndexOf("'") + 1,
+        column: unclosedStr.col,
         severity: 'error',
         category: 'symbol',
         rule: 'unterminated-string',
-        message: `Dòng ${lineNum}: Chuỗi ký tự thiếu dấu đóng nháy đơn "'".`,
-        suggestion: rawLine.trimEnd() + "'",
-        fixable: true,
-      });
-    } else if (quoteCountDouble % 2 !== 0 && !rawLine.includes('"""')) {
-      errors.push({
-        id: `unterminated-string-double-${lineNum}`,
-        line: lineNum,
-        column: rawLine.lastIndexOf('"') + 1,
-        severity: 'error',
-        category: 'symbol',
-        rule: 'unterminated-string',
-        message: `Dòng ${lineNum}: Chuỗi ký tự thiếu dấu đóng nháy kép '"'.`,
-        suggestion: rawLine.trimEnd() + '"',
+        message: `Dòng ${lineNum}: Chuỗi ký tự thiếu dấu đóng nháy ${unclosedStr.quote === "'" ? `đơn "'"` : `kép '"'`}.`,
+        suggestion: rawLine.trimEnd() + unclosedStr.quote,
         fixable: true,
       });
     }
@@ -974,7 +1075,7 @@ export function lintPythonCode(code: string): LintResult {
           category: 'syntax',
           rule: 'assignment-in-condition',
           message: `Dòng ${lineNum}: Bạn đang dùng phép gán "=" trong câu lệnh điều kiện. Phép so sánh bằng trong Python phải dùng "==".`,
-          suggestion: trimmedClean.replace(assignmentRegex, '=='),
+          suggestion: rawLine.replace(assignmentRegex, '=='),
           fixable: true,
         });
       }
@@ -982,8 +1083,8 @@ export function lintPythonCode(code: string): LintResult {
 
     // 3.4 Nhầm lẫn phép so sánh '==' thay vì gán '=' ở đầu dòng (Ví dụ: total == 0)
     if (/^[a-zA-Z_]\w*\s*==\s*[^=]/.test(trimmedClean) && !/^(if|elif|while|assert|return)/.test(trimmedClean)) {
-      const varName = trimmedClean.split('==')[0].trim();
-      const val = trimmedClean.split('==')[1].trim();
+      const varName = trimmed.split('==')[0].trim();
+      const val = trimmed.split('==').slice(1).join('==').trim();
       errors.push({
         id: `double-equal-assignment-${lineNum}`,
         line: lineNum,
@@ -1012,7 +1113,10 @@ export function lintPythonCode(code: string): LintResult {
     ) {
       const varName = unassignedMatch[1];
       const op = unassignedMatch[2];
-      const restExpr = unassignedMatch[3].trim();
+      const rawUnassignedMatch = trimmed.match(
+        /^([a-zA-Z_]\w*)\s*([\+\-\*\/%]|(?:\/\/)|(?:\*\*))\s*(.+)$/
+      );
+      const restExpr = rawUnassignedMatch ? rawUnassignedMatch[3].trim() : unassignedMatch[3].trim();
       errors.push({
         id: `unassigned-expression-${lineNum}`,
         line: lineNum,
@@ -1020,7 +1124,7 @@ export function lintPythonCode(code: string): LintResult {
         severity: 'error',
         category: 'syntax',
         rule: 'unassigned-expression',
-        message: `Dòng ${lineNum}: Phép tính "${trimmedClean}" không lưu kết quả! Biến "${varName}" sẽ không được cộng dồn và không đổi giá trị.`,
+        message: `Dòng ${lineNum}: Phép tính "${trimmed}" không lưu kết quả! Biến "${varName}" sẽ không được cộng dồn và không đổi giá trị.`,
         suggestion: `${varName} ${op}= ${restExpr}  (hoặc ${varName} = ${varName} ${op} ${restExpr})`,
         fixable: true,
       });
@@ -1028,7 +1132,7 @@ export function lintPythonCode(code: string): LintResult {
 
     // 3.6 Hàm print thiếu ngoặc tròn (thói quen Python 2)
     if (/^\s*print\s+[^(]/.test(trimmedClean) && !/^\s*print\s*$/.test(trimmedClean)) {
-      const printArg = trimmedClean.replace(/^\s*print\s+/, '').replace(/;*$/, '');
+      const printArg = trimmed.replace(/^\s*print\s+/, '').replace(/;*$/, '');
       errors.push({
         id: `print-without-parens-${lineNum}`,
         line: lineNum,
@@ -1073,8 +1177,10 @@ export function lintPythonCode(code: string): LintResult {
     const currentDefParams = new Set<string>();
     if (defMatch) {
       const fnName = defMatch[1];
-      const params = defMatch[2].split(',').map((p) => p.trim()).filter(Boolean);
-      definedFunctions.push({ name: fnName, line: lineNum, params });
+      const params = defMatch[2]
+        .split(',')
+        .map((p) => p.split('=')[0].split(':')[0].replace(/\*/g, '').trim())
+        .filter(Boolean);
       declaredVariables.add(fnName);
       params.forEach((p) => {
         declaredVariables.add(p);
@@ -1082,11 +1188,12 @@ export function lintPythonCode(code: string): LintResult {
       });
     }
 
-    // 4.2 Thu thập biến từ vòng lặp for dòng hiện tại
-    const forMatch = trimmedClean.match(/^for\s+([^:]+)\s+in\s+/);
+    // 4.2 Thu thập biến từ vòng lặp for dòng hiện tại (bao gồm cả for đầu dòng và list comprehension)
     const currentForVars = new Set<string>();
-    if (forMatch) {
-      const rawVars = forMatch[1].replace(/[()]/g, '').split(',');
+    const forInlineRegex = /\bfor\s+([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*|\([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*\))\s+in\b/g;
+    let forMatchIter: RegExpExecArray | null;
+    while ((forMatchIter = forInlineRegex.exec(trimmedClean)) !== null) {
+      const rawVars = forMatchIter[1].replace(/[()]/g, '').split(',');
       rawVars.forEach((v) => {
         const cleanedVar = v.trim();
         if (/^[a-zA-Z_]\w*$/.test(cleanedVar)) {
@@ -1096,10 +1203,27 @@ export function lintPythonCode(code: string): LintResult {
       });
     }
 
-    // 4.3 Thu thập biến thuộc vế trái của phép gán đơn (a = ..., a, b = ...)
-    const simpleAssignMatch = trimmedClean.match(/^\s*([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*=[^=]/);
+    // Thu thập biến từ `as` (with ... as f, except ... as e) và tham số `lambda x, y: ...`
+    const asTargetMatch = trimmedClean.match(/\bas\s+([a-zA-Z_]\w*)/);
+    if (asTargetMatch) {
+      declaredVariables.add(asTargetMatch[1]);
+      currentForVars.add(asTargetMatch[1]);
+    }
+    const lambdaMatch = trimmedClean.match(/\blambda\s+([^:]+):/);
+    if (lambdaMatch) {
+      lambdaMatch[1].split(',').forEach((p) => {
+        const cleaned = p.split('=')[0].trim();
+        if (/^[a-zA-Z_]\w*$/.test(cleaned)) {
+          declaredVariables.add(cleaned);
+          currentForVars.add(cleaned);
+        }
+      });
+    }
+
+    // 4.3 Thu thập biến thuộc vế trái của phép gán đơn (s = "abcdefg", t = s[::2], a, b = ..., a = b = ...)
+    const simpleAssignMatch = trimmedClean.match(/^\s*\(?([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\)?\s*=(?!=)/);
     const simpleLhsVars = new Set<string>();
-    if (simpleAssignMatch && !/^(if|elif|while)/.test(trimmedClean)) {
+    if (simpleAssignMatch && !/^(if|elif|while|return|assert)\b/.test(trimmedClean)) {
       simpleAssignMatch[1].split(',').forEach((v) => {
         const cleaned = v.trim();
         if (/^[a-zA-Z_]\w*$/.test(cleaned)) {
@@ -1107,6 +1231,28 @@ export function lintPythonCode(code: string): LintResult {
           simpleLhsVars.add(cleaned);
         }
       });
+      // Hỗ trợ gán chuỗi nhiều biến: a = b = 0
+      const chainedMatches = trimmedClean.matchAll(/([a-zA-Z_]\w*)\s*=(?!=)/g);
+      for (const cm of chainedMatches) {
+        if (cm[1] && !PYTHON_KEYWORDS.has(cm[1])) {
+          declaredVariables.add(cm[1]);
+          simpleLhsVars.add(cm[1]);
+        }
+      }
+
+      // Nhận diện biến kiểu Xâu kí tự (str) để phục vụ kiểm tra chuyên sâu bài tập xâu
+      const rhsClean = trimmedClean.replace(/^\s*\(?[a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*\)?\s*=\s*/, '').trim();
+      const isStringRhs =
+        rhsClean.startsWith('""') ||
+        /^str\s*\(/.test(rhsClean) ||
+        /^input\s*\(/.test(rhsClean) ||
+        /^chr\s*\(/.test(rhsClean) ||
+        /""\.join\s*\(/.test(rhsClean) ||
+        Array.from(stringVariables).some((sv) => new RegExp(`^${sv}\\b`).test(rhsClean));
+
+      if (isStringRhs && simpleLhsVars.size === 1) {
+        simpleLhsVars.forEach((v) => stringVariables.add(v));
+      }
     }
 
     // 4.4 CHẨN ĐOÁN TOÀN DIỆN LỖI BIẾN CHƯA KHAI BÁO & LỖI GÕ SAI TÊN BIẾN (NameError & Typos)
@@ -1130,6 +1276,12 @@ export function lintPythonCode(code: string): LintResult {
       // Bỏ qua tên phương thức gọi sau dấu chấm (ví dụ: arr.append, string.split)
       const dotMethodRegex = new RegExp(`\\.\\s*${token}\\b`);
       if (dotMethodRegex.test(codeWithoutStrComment)) {
+        continue;
+      }
+
+      // Bỏ qua tên tham số đặt tên (keyword arguments) trong lời gọi hàm: print(..., end=""), sort(reverse=True)
+      const kwArgRegex = new RegExp(`[(,]\\s*${token}\\s*=(?!=)`);
+      if (kwArgRegex.test(codeWithoutStrComment)) {
         continue;
       }
 
@@ -1194,10 +1346,10 @@ export function lintPythonCode(code: string): LintResult {
     currentDefParams.forEach((p) => variablesDeclaredSoFar.add(p));
     currentForVars.forEach((v) => variablesDeclaredSoFar.add(v));
     simpleLhsVars.forEach((v) => variablesDeclaredSoFar.add(v));
-    const augAssignMatch = trimmedClean.match(/^([a-zA-Z_]\w*)\s*(\+=|-=|\*=|\/=|%=)/);
+    const augAssignMatch = trimmedClean.match(/^([a-zA-Z_]\w*)\s*(\+=|-=|\*=|\/=|\/\/=|%=|\*\*=)/);
     if (augAssignMatch) variablesDeclaredSoFar.add(augAssignMatch[1]);
 
-    // 4.5 Chỉ số mảng chứa phép chia số thực "/" (Index must be int, not float)
+    // 4.5 Chỉ số mảng / cắt xâu chứa phép chia số thực "/" (Index must be int, not float)
     const floatDivIndexing = codeWithoutStrComment.match(/\[[^\]]*\b[a-zA-Z0-9_\(\)]+\s*\/\s*[a-zA-Z0-9_\(\)]+[^\]]*\]/);
     if (floatDivIndexing && !floatDivIndexing[0].includes('//')) {
       errors.push({
@@ -1207,10 +1359,112 @@ export function lintPythonCode(code: string): LintResult {
         severity: 'error',
         category: 'semantics',
         rule: 'float-div-indexing',
-        message: `Dòng ${lineNum}: Chỉ số mảng chứa phép chia số thực "/". Trong Python 3, chỉ số mảng phải là số nguyên int, hãy dùng phép chia nguyên "//" (ví dụ: arr[len(arr) // 2]).`,
+        message: `Dòng ${lineNum}: Chỉ số mảng/xâu chứa phép chia số thực "/". Trong Python 3, chỉ số hoặc vị trí cắt xâu (slice) bắt buộc phải là số nguyên int, hãy dùng phép chia nguyên "//" (ví dụ: s[len(s) // 2]).`,
         suggestion: rawLine.replace(/([a-zA-Z0-9_\)]+)\s*\/\s*([a-zA-Z0-9_\(]+)/, '$1 // $2'),
         fixable: true,
       });
+    }
+
+    // 4.5b LỖI XÂU KÍ TỰ (STRING IMMUTABILITY): Gán trực tiếp kí tự vào vị trí của xâu s[0] = 'a'
+    const strItemAssignMatch = trimmedClean.match(/^([a-zA-Z_]\w*)\s*\[\s*([^\]]+)\s*\]\s*=(?!=)\s*(.+)$/);
+    if (strItemAssignMatch && stringVariables.has(strItemAssignMatch[1])) {
+      const sVar = strItemAssignMatch[1];
+      const idxExpr = strItemAssignMatch[2].trim();
+      const rawRhs = rawLine.split(/=(?!=)/).slice(1).join('=').trim();
+      errors.push({
+        id: `string-item-assign-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf('[') + 1,
+        severity: 'error',
+        category: 'semantics',
+        rule: 'string-item-assignment',
+        message: `Dòng ${lineNum}: Lỗi bất biến xâu kí tự (TypeError: 'str' object does not support item assignment)! Trong Python, xâu "${sVar}" là kiểu bất biến (immutable), không thể sửa trực tiếp từng kí tự bằng "${sVar}[${idxExpr}] = ...".`,
+        suggestion: `Hãy dùng phép cắt ghép xâu: ${sVar} = ${sVar}[:${idxExpr}] + ${rawRhs} + ${sVar}[${idxExpr} + 1:]`,
+        fixable: true,
+      });
+    }
+
+    // 4.5c LỖI DÙNG DẤU HAI CHẤM ":" TRONG HÀM range() THAY VÌ DẤU PHẨY "," (Ví dụ: range(0:len(s):2))
+    const rangeColonMatch = codeWithoutStrComment.match(/\brange\s*\(([^)]*:[^)]*)\)/);
+    if (rangeColonMatch) {
+      errors.push({
+        id: `range-colon-syntax-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf('range') + 1,
+        severity: 'error',
+        category: 'syntax',
+        rule: 'range-colon-syntax',
+        message: `Dòng ${lineNum}: Lỗi cú pháp trong hàm "range()"! Các tham số (start, stop, step) trong "range()" phải ngăn cách bằng dấu phẩy ",", không được dùng dấu hai chấm ":" như khi cắt xâu.`,
+        suggestion: rawLine.replace(/(\brange\s*\([^)]+)\:([^)]*\))/g, (m) => m.replace(/:/g, ', ')),
+        fixable: true,
+      });
+    }
+
+    // 4.5d LỖI DÙNG DẤU PHẨY "," KHI CẮT XÂU (STRING SLICING) THAY VÌ DẤU HAI CHẤM ":" (Ví dụ: s[1, 3] hoặc s[0, len(s), 2])
+    const sliceCommaMatch = codeWithoutStrComment.match(/\b([a-zA-Z_]\w*)\s*\[\s*([^\]\[:]+(?:\s*,\s*[^\]\[:]+)+)\s*\]/);
+    if (sliceCommaMatch && stringVariables.has(sliceCommaMatch[1])) {
+      const sVar = sliceCommaMatch[1];
+      const insideBracket = sliceCommaMatch[2];
+      const fixedSlice = insideBracket.split(',').map((p) => p.trim()).join(':');
+      errors.push({
+        id: `string-slice-comma-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf('[') + 1,
+        severity: 'error',
+        category: 'semantics',
+        rule: 'string-slice-comma',
+        message: `Dòng ${lineNum}: Lỗi cú pháp cắt xâu (TypeError: string indices must be integers)! Để cắt xâu "${sVar}", bạn phải dùng dấu hai chấm ":" (${sVar}[${fixedSlice}]) thay vì dấu phẩy ",".`,
+        suggestion: rawLine.replace(sliceCommaMatch[0], `${sVar}[${fixedSlice}]`),
+        fixable: true,
+      });
+    }
+
+    // 4.5e LỖI BƯỚC NHẢY CẮT XÂU BẰNG 0 (ValueError: slice step cannot be zero, ví dụ: s[::0])
+    const zeroSliceStepMatch = codeWithoutStrComment.match(/\[[^\]]*:[^\]]*:\s*0\s*\]/);
+    if (zeroSliceStepMatch) {
+      errors.push({
+        id: `zero-slice-step-${lineNum}`,
+        line: lineNum,
+        column: rawLine.indexOf(':0') !== -1 ? rawLine.indexOf(':0') + 1 : 1,
+        severity: 'error',
+        category: 'semantics',
+        rule: 'zero-slice-step',
+        message: `Dòng ${lineNum}: Lỗi bước nhảy cắt xâu bằng 0 (ValueError: slice step cannot be zero)! Bước nhảy (step) trong [start:stop:step] bắt buộc phải khác 0 (ví dụ: [::2] hoặc [::-1]).`,
+        fixable: false,
+      });
+    }
+
+    // 4.5f LỖI PHƯƠNG THỨC XÂU KÍ TỰ TỪ NGÔN NGỮ KHÁC (JS / Java / C++ / Pascal)
+    const wrongStrMethodMatch = trimmedClean.match(
+      /([a-zA-Z_]\w*)\.(toUpperCase|toLowerCase|trim|charAt|substr|substring|len)\s*\(([^)]*)\)/
+    );
+    if (wrongStrMethodMatch) {
+      const targetVar = wrongStrMethodMatch[1];
+      const wrongMethod = wrongStrMethodMatch[2];
+      const argInside = wrongStrMethodMatch[3].trim();
+      const methodFixes: Record<string, { py: string; desc: string }> = {
+        toUpperCase: { py: `${targetVar}.upper()`, desc: `.upper()` },
+        toLowerCase: { py: `${targetVar}.lower()`, desc: `.lower()` },
+        trim: { py: `${targetVar}.strip()`, desc: `.strip()` },
+        charAt: { py: `${targetVar}[${argInside || '0'}]`, desc: `${targetVar}[i]` },
+        substr: { py: `${targetVar}[${argInside.replace(/\s*,\s*/, ':')}]`, desc: `cắt xâu ${targetVar}[start:end]` },
+        substring: { py: `${targetVar}[${argInside.replace(/\s*,\s*/, ':')}]`, desc: `cắt xâu ${targetVar}[start:end]` },
+        len: { py: `len(${targetVar})`, desc: `hàm len(${targetVar})` },
+      };
+      const fixInfo = methodFixes[wrongMethod];
+      if (fixInfo) {
+        errors.push({
+          id: `wrong-str-method-${lineNum}`,
+          line: lineNum,
+          column: rawLine.indexOf(`.${wrongMethod}`) + 1,
+          severity: 'error',
+          category: 'semantics',
+          rule: 'wrong-string-method',
+          message: `Dòng ${lineNum}: Trong Python xâu kí tự không có phương thức ".${wrongMethod}()". Hãy dùng ${fixInfo.desc}.`,
+          suggestion: rawLine.replace(wrongStrMethodMatch[0], fixInfo.py),
+          fixable: true,
+        });
+      }
     }
 
     // 4.6 Các phương thức mảng bị nhầm từ JS / Java / C++
@@ -1565,11 +1819,42 @@ export function autoFixPythonCode(code: string): { fixedCode: string; fixesAppli
       fixesApplied.push(`Dòng ${i + 1}: Đổi "${incMatch[2]}" thành "${op} 1".`);
     }
 
-    // 13. Sửa phương thức mảng .push -> .append
+    // 13. Sửa phương thức mảng .push -> .append và phương thức xâu JS/Java (.toUpperCase, .toLowerCase, .trim, .len)
     if (/\.push\s*\(/.test(line)) {
       line = line.replace(/\.push\(/g, '.append(');
       lines[i] = line;
       fixesApplied.push(`Dòng ${i + 1}: Đổi ".push()" thành ".append()".`);
+    }
+    if (/\.toUpperCase\s*\(\s*\)/.test(line)) {
+      line = line.replace(/\.toUpperCase\s*\(\s*\)/g, '.upper()');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi ".toUpperCase()" thành ".upper()".`);
+    }
+    if (/\.toLowerCase\s*\(\s*\)/.test(line)) {
+      line = line.replace(/\.toLowerCase\s*\(\s*\)/g, '.lower()');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi ".toLowerCase()" thành ".lower()".`);
+    }
+    if (/\.trim\s*\(\s*\)/.test(line)) {
+      line = line.replace(/\.trim\s*\(\s*\)/g, '.strip()');
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi ".trim()" thành ".strip()".`);
+    }
+    const dotLenMatch = line.match(/\b([a-zA-Z_]\w*)\.(?:len|size)\s*\(\s*\)|\b([a-zA-Z_]\w*)\.length\b/);
+    if (dotLenMatch) {
+      const targetV = dotLenMatch[1] || dotLenMatch[2];
+      line = line.replace(dotLenMatch[0], `len(${targetV})`);
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi "${dotLenMatch[0]}" thành "len(${targetV})".`);
+    }
+
+    // 13.5 Sửa dấu ":" trong range(a:b:c) thành dấu phẩy range(a, b, c)
+    if (/\brange\s*\([^)]*:[^)]*\)/.test(line)) {
+      line = line.replace(/\brange\s*\(([^)]*:[^)]*)\)/g, (_, inner) => {
+        return `range(${inner.split(':').map((s: string) => s.trim()).join(', ')})`;
+      });
+      lines[i] = line;
+      fixesApplied.push(`Dòng ${i + 1}: Đổi dấu ":" trong hàm range() thành dấu phẩy "," chuẩn.`);
     }
 
     // 14. Sửa chia float trong mảng [n / 2] -> [n // 2]
@@ -1625,14 +1910,28 @@ export function autoFixPythonCode(code: string): { fixedCode: string; fixesAppli
     }
   }
 
-  // 18.5 Tự động sửa lỗi gõ sai tên biến (ví dụ: tota -> total, resul -> result, user_dat -> user_data)
+  // 18.5 Tự động sửa lỗi gõ sai tên biến, lỗi cắt xâu dùng dấu phẩy, và lỗi gán kí tự vào xâu bất biến
   const tempDiagnostics = lintPythonCode(lines.join('\n'));
   for (const err of tempDiagnostics.errors) {
-    if (err.rule === 'undefined-variable-typo' && err.fixable && err.suggestion) {
+    if (
+      (err.rule === 'undefined-variable-typo' ||
+        err.rule === 'string-slice-comma' ||
+        err.rule === 'wrong-string-method') &&
+      err.fixable &&
+      err.suggestion
+    ) {
       const lineIdx = err.line - 1;
       if (lineIdx >= 0 && lineIdx < lines.length) {
         lines[lineIdx] = err.suggestion;
-        fixesApplied.push(`Dòng ${err.line}: Sửa tên biến gõ sai thành tên biến đã khai báo chuẩn.`);
+        fixesApplied.push(`Dòng ${err.line}: ${err.message}`);
+      }
+    } else if (err.rule === 'string-item-assignment' && err.fixable && err.suggestion) {
+      const lineIdx = err.line - 1;
+      if (lineIdx >= 0 && lineIdx < lines.length) {
+        const indent = lines[lineIdx].match(/^(\s*)/)?.[1] || '';
+        const cleanFix = err.suggestion.replace(/^Hãy dùng phép cắt ghép xâu:\s*/, '');
+        lines[lineIdx] = `${indent}${cleanFix}`;
+        fixesApplied.push(`Dòng ${err.line}: Chuyển phép gán kí tự trực tiếp sang phép cắt ghép xâu mới.`);
       }
     }
   }
@@ -1700,6 +1999,9 @@ export function translatePythonErrorToVietnamese(rawError: string): {
     } else if (rawError.includes('Perhaps you forgot a comma?')) {
       specificExplanation = `Dòng ${line || ''} thiếu dấu phẩy "," ngăn cách giữa các phần tử trong danh sách hoặc tham số hàm.`;
       specificSuggestion = 'Thêm dấu phẩy giữa các phần tử: ví dụ [1, 2, 3].';
+    } else if (rawError.includes('unterminated string literal') || rawError.includes('EOL while scanning string literal')) {
+      specificExplanation = `Dòng ${line || ''} có xâu kí tự chưa được đóng dấu nháy (' hoặc ").`;
+      specificSuggestion = 'Thêm dấu nháy đóng tương ứng ở cuối xâu kí tự.';
     }
 
     return {
@@ -1733,7 +2035,7 @@ export function translatePythonErrorToVietnamese(rawError: string): {
   if (rawError.includes('NameError')) {
     const varMatch = rawError.match(/name '(\w+)' is not defined/);
     const varName = varMatch ? varMatch[1] : 'biến';
-    let hint = `Hãy gán giá trị cho "${varName}" trước khi sử dụng (ví dụ: ${varName} = 0) hoặc kiểm tra xem bạn có viết sai chính tả tên biến không.`;
+    let hint = `Hãy gán giá trị cho "${varName}" trước khi sử dụng (ví dụ: ${varName} = 0 hoặc ${varName} = "") hoặc kiểm tra xem bạn có viết sai chính tả tên biến không.`;
     let isKwError = false;
 
     // Kiểm tra nếu tên biến chưa khai báo thực chất là do gõ sai từ khóa hoặc viết hoa từ khóa
@@ -1772,10 +2074,17 @@ export function translatePythonErrorToVietnamese(rawError: string): {
   }
 
   if (rawError.includes('IndexError')) {
+    const isStringIdx = rawError.includes('string index out of range');
     return {
-      title: 'Lỗi vượt quá chỉ số mảng (IndexError: list index out of range)',
-      vietnameseExplanation: 'Bạn đang truy cập vào một vị trí (index) không tồn tại trong danh sách.',
-      suggestion: 'Nhớ rằng chỉ số mảng trong Python bắt đầu từ 0 đến len(arr) - 1. Nếu duyệt mảng và truy cập arr[i+1], hãy giới hạn vòng lặp là range(len(arr) - 1).',
+      title: isStringIdx
+        ? 'Lỗi vượt quá chỉ số xâu kí tự (IndexError: string index out of range)'
+        : 'Lỗi vượt quá chỉ số mảng (IndexError: list index out of range)',
+      vietnameseExplanation: isStringIdx
+        ? 'Bạn đang truy cập vào vị trí kí tự s[i] vượt ngoài độ dài của xâu (hoặc xâu đang rỗng).'
+        : 'Bạn đang truy cập vào một vị trí (index) không tồn tại trong danh sách.',
+      suggestion: isStringIdx
+        ? 'Nhớ rằng chỉ số của xâu s bắt đầu từ 0 đến len(s) - 1. Nếu dùng phép cắt xâu s[a:b] thì không bao giờ bị lỗi vượt chỉ số.'
+        : 'Nhớ rằng chỉ số mảng trong Python bắt đầu từ 0 đến len(arr) - 1. Nếu duyệt mảng và truy cập arr[i+1], hãy giới hạn vòng lặp là range(len(arr) - 1).',
       line,
     };
   }
@@ -1784,12 +2093,21 @@ export function translatePythonErrorToVietnamese(rawError: string): {
     let exp = 'Đang thực hiện phép toán giữa 2 kiểu dữ liệu không tương thích với nhau.';
     let sug = 'Kiểm tra kiểu dữ liệu của các biến tham gia phép toán.';
 
-    if (rawError.includes("'list' object is not callable")) {
-      exp = 'Bạn đang dùng ngoặc tròn () trên một danh sách mảng như thể gọi hàm (ví dụ: arr(i)).';
-      sug = 'Để truy cập phần tử trong Python, bạn phải dùng ngoặc vuông: arr[i].';
-    } else if (rawError.includes('list indices must be integers or slices, not float')) {
-      exp = 'Chỉ số mảng đang là số thực (float) do bạn dùng phép chia "/".';
-      sug = 'Hãy dùng phép chia lấy phần nguyên "//" (ví dụ: arr[len(arr) // 2]).';
+    if (rawError.includes("'str' object does not support item assignment")) {
+      exp = 'Trong Python, xâu kí tự (str) là kiểu dữ liệu bất biến (immutable), không thể gán trực tiếp s[i] = "..." để đổi 1 kí tự.';
+      sug = 'Hãy tạo xâu mới bằng phép cắt ghép: s = s[:i] + "kí_tự_mới" + s[i+1:] hoặc chuyển sang list(s).';
+    } else if (rawError.includes('can only concatenate str')) {
+      exp = 'Bạn đang cộng trực tiếp một xâu kí tự (str) với một số (int/float).';
+      sug = 'Hãy ép kiểu số sang xâu bằng hàm str(so) trước khi ghép nối với xâu kí tự.';
+    } else if (rawError.includes('string indices must be integers')) {
+      exp = 'Chỉ số truy cập xâu kí tự s[...] phải là số nguyên (int) hoặc lát cắt (slice dùng dấu ":"), không được dùng chuỗi hay dấu phẩy.';
+      sug = 'Nếu muốn cắt xâu, hãy dùng dấu hai chấm ":" (ví dụ: s[1:4] hoặc s[::2]).';
+    } else if (rawError.includes("'list' object is not callable") || rawError.includes("'str' object is not callable")) {
+      exp = 'Bạn đang dùng ngoặc tròn () trên một danh sách hoặc xâu kí tự như thể gọi hàm (ví dụ: s(i) hoặc arr(i)).';
+      sug = 'Để truy cập phần tử hoặc kí tự trong Python, bạn bắt buộc phải dùng ngoặc vuông: s[i] hoặc arr[i].';
+    } else if (rawError.includes('indices must be integers or slices, not float')) {
+      exp = 'Chỉ số mảng hoặc xâu đang là số thực (float) do bạn dùng phép chia "/".';
+      sug = 'Hãy dùng phép chia lấy phần nguyên "//" (ví dụ: s[len(s) // 2]).';
     } else if (rawError.includes("'<' not supported between instances of")) {
       exp = 'Không thể so sánh giữa chuỗi chữ (str) và số nguyên (int).';
       sug = 'Hãy dùng int() để ép kiểu dữ liệu từ chuỗi sang số trước khi so sánh.';
@@ -1797,6 +2115,24 @@ export function translatePythonErrorToVietnamese(rawError: string): {
 
     return {
       title: 'Lỗi kiểu dữ liệu (TypeError)',
+      vietnameseExplanation: exp,
+      suggestion: sug,
+      line,
+    };
+  }
+
+  if (rawError.includes('ValueError')) {
+    let exp = 'Giá trị truyền vào hàm hoặc phép toán không hợp lệ.';
+    let sug = 'Kiểm tra lại dữ liệu đầu vào hoặc tham số câu lệnh.';
+    if (rawError.includes('slice step cannot be zero')) {
+      exp = 'Bước nhảy (step) khi cắt xâu hoặc danh sách [start:stop:step] không được phép bằng 0.';
+      sug = 'Hãy dùng bước nhảy khác 0 (ví dụ: s[::2] để lấy các vị trí chẵn, hoặc s[::-1] để đảo ngược xâu).';
+    } else if (rawError.includes('invalid literal for int()')) {
+      exp = 'Không thể chuyển đổi chuỗi chứa chữ cái hoặc ký tự đặc biệt sang số nguyên bằng int().';
+      sug = 'Đảm bảo chuỗi chỉ chứa các chữ số trước khi gọi int().';
+    }
+    return {
+      title: 'Lỗi giá trị không hợp lệ (ValueError)',
       vietnameseExplanation: exp,
       suggestion: sug,
       line,

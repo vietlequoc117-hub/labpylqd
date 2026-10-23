@@ -292,6 +292,44 @@ export function answerStudentQuestion(params: {
   }
 
   // =========================================================================
+  // 7.1 CÂU HỎI VỀ DẠNG BÀI TẬP XÂU KÍ TỰ & KỸ THUẬT CẮT XÂU (STRING SLICING)
+  // =========================================================================
+  const isStringExerciseQuery =
+    q.includes('xâu kí tự') ||
+    q.includes('xâu ký tự') ||
+    q.includes('cắt xâu') ||
+    q.includes('slicing') ||
+    q.includes('s[1:]') ||
+    q.includes('s[::2]') ||
+    q.includes('s[::-1]');
+
+  if (isStringExerciseQuery) {
+    return `🎯 **TRẢ LỜI ĐÚNG TRỌNG TÂM: BÍ KÍP GIẢI BÀI TẬP XÂU KÍ TỰ & CẮT XÂU (SLICING) TRONG PYTHON**\n\n` +
+      `### 1. Quy tắc cắt xâu \`s[start : stop : step]\`:\n` +
+      `- **\`s[1:]\`**: Lấy phần xâu từ vị trí chỉ số \`1\` đến hết xâu (bỏ kí tự đầu tiên \`s[0]\`).\n` +
+      `- **\`s[1:] + s[0]\`**: **Phép dịch vòng sang trái 1 kí tự** — cắt kí tự đầu tiên \`s[0]\` đem nối xuống cuối xâu.\n` +
+      `- **\`s[::2]\`**: Lấy các kí tự từ đầu đến cuối với **bước nhảy = 2** (tức là các vị trí chỉ số chẵn: \`0, 2, 4, 6...\`).\n` +
+      `- **\`s[::-1]\`**: Đảo ngược toàn bộ xâu kí tự.\n\n` +
+      `### 2. Ví dụ minh họa từng bước (Bài tập mẫu điển hình):\n` +
+      `\`\`\`python\n` +
+      `s = "abcdefg"               # Độ dài len(s) = 7\n` +
+      `for i in range(0, len(s), 2): # i lần lượt nhận: 0, 2, 4, 6 (4 lượt lặp)\n` +
+      `    s = s[1:] + s[0]        # Mỗi lượt dịch kí tự đầu xuống cuối\n` +
+      `t = s[::2]                  # Lấy các kí tự ở vị trí 0, 2, 4, 6\n` +
+      `print(t)\n` +
+      `\`\`\`\n` +
+      `- **Lượt 1 (\`i = 0\`):** \`s\` từ \`"abcdefg"\` $\\to$ \`"bcdefga"\`\n` +
+      `- **Lượt 2 (\`i = 2\`):** \`s\` từ \`"bcdefga"\` $\\to$ \`"cdefgab"\`\n` +
+      `- **Lượt 3 (\`i = 4\`):** \`s\` từ \`"cdefgab"\` $\\to$ \`"defgabc"\`\n` +
+      `- **Lượt 4 (\`i = 6\`):** \`s\` từ \`"defgabc"\` $\\to$ \`"efgabcd"\`\n` +
+      `- **Sau vòng lặp:** \`t = s[::2]\` lấy các vị trí \`0 ('e'), 2 ('g'), 4 ('b'), 6 ('d')\` $\\to$ Kết quả in ra: **\`egbd\`**!\n\n` +
+      `⚠️ **3 lỗi học sinh hay mắc nhất với Xâu kí tự:**\n` +
+      `1. **Gán trực tiếp \`s[0] = "z"\`** $\\to$ Lỗi \`TypeError\` vì xâu trong Python là **bất biến (immutable)**.\n` +
+      `2. **Dùng dấu \`,\` khi cắt xâu (\`s[1, 3]\`)** $\\to$ Phải dùng dấu hai chấm **\`s[1:3]\`**.\n` +
+      `3. **Dùng dấu \`:\` trong \`range(0:len(s):2)\`** $\\to$ Trong \`range()\` bắt buộc dùng dấu phẩy **\`range(0, len(s), 2)\`**.`;
+  }
+
+  // =========================================================================
   // 8. CÂU HỎI TỔNG THỂ TẤT CẢ CÁC BÀI & BẢNG SO SÁNH MA TRẬN THUẬT TOÁN THPT
   // =========================================================================
   const isAllAlgorithmsMatrixQuery =

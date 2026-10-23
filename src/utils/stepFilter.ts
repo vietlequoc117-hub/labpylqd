@@ -67,15 +67,51 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
     }
   }
 
-  // Nếu không có mảng trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "PYTHON")
-  for (const name of preferredNames) {
+  // Nếu không có mảng trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "abcdefg", t = s[::2])
+  const stringPreferredNames = [
+    ...preferredNames,
+    't',
+    'xau',
+    'chuoi',
+    'st',
+    'str1',
+    'str2',
+    'res',
+    'result',
+    'ans',
+    'kq',
+    'ket_qua',
+  ];
+
+  // Nếu có nhiều biến xâu (như s và t), gộp snapshot để mọi thay đổi trên s hoặc t đều được giữ lại thành bước mô phỏng
+  const stringSnapshots: ArraySnapshotItem[] = [];
+  for (const name of stringPreferredNames) {
     const varVal = vars[name];
     if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
-      if (rawStr.length > 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
-        return rawStr.split('');
+      if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+        if (stringSnapshots.length === 0) {
+          stringSnapshots.push(...rawStr.split(''));
+        } else {
+          stringSnapshots.push(`|${name}:${rawStr}`);
+        }
       }
     }
+  }
+
+  // Fallback: bất kỳ biến kiểu 'str' nào khác trong frame hiện tại
+  if (stringSnapshots.length === 0) {
+    for (const [varName, varVal] of Object.entries(vars)) {
+      if (varName.startsWith('_')) continue;
+      if (varVal && varVal.type === 'str') {
+        const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+        if (rawStr.length >= 1) {
+          return rawStr.split('');
+        }
+      }
+    }
+  } else {
+    return stringSnapshots;
   }
 
   return null;
