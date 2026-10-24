@@ -537,43 +537,47 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Quick Templates for Students */}
-          <button
-            type="button"
-            onClick={() => {
-              onChange(`n = int(input())\nm = int(input())\na = n * m\nprint(a)\n`);
-              onStdinChange('5\n10');
-              onStopThonny?.();
-            }}
-            className="px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-semibold transition-colors cursor-pointer"
-            title="Mẫu bài tập nhập 2 số nguyên n, m và tính toán"
-          >
-            Mẫu: Nhập n, m
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onChange(`s = "abcdefg"\nfor i in range(0, len(s), 2):\n    s = s[1:] + s[0]\nt = s[::2]\nprint(t)\n`);
-              onStdinChange('abcdefg');
-              onStopThonny?.();
-            }}
-            className="px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-semibold transition-colors cursor-pointer"
-            title="Mẫu bài tập xử lý và cắt xâu kí tự"
-          >
-            Mẫu: Xâu kí tự
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onChange('');
-              onStopThonny?.();
-              if (editorRef.current) editorRef.current.focus();
-            }}
-            className="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
-            title="Xóa trắng trình soạn thảo để tự gõ code từ đầu"
-          >
-            Xóa trắng tự gõ
-          </button>
+          {/* Quick Templates for Students (Chỉ hiển thị ở chế độ Tự do nhập code / Thonny mode) */}
+          {isThonnyMode && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(`n = int(input())\nm = int(input())\na = n * m\nprint(a)\n`);
+                  onStdinChange('5\n10');
+                  onStopThonny?.();
+                }}
+                className="px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-semibold transition-colors cursor-pointer"
+                title="Mẫu bài tập nhập 2 số nguyên n, m và tính toán"
+              >
+                Mẫu: Nhập n, m
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(`s = "abcdefg"\nfor i in range(0, len(s), 2):\n    s = s[1:] + s[0]\nt = s[::2]\nprint(t)\n`);
+                  onStdinChange('abcdefg');
+                  onStopThonny?.();
+                }}
+                className="px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-semibold transition-colors cursor-pointer"
+                title="Mẫu bài tập xử lý và cắt xâu kí tự"
+              >
+                Mẫu: Xâu kí tự
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('');
+                  onStopThonny?.();
+                  if (editorRef.current) editorRef.current.focus();
+                }}
+                className="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
+                title="Xóa trắng trình soạn thảo để tự gõ code từ đầu"
+              >
+                Xóa trắng tự gõ
+              </button>
+            </>
+          )}
 
           {/* Quick Auto-Fix Button in Header */}
           {lintResult.canAutoFix && (
