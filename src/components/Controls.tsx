@@ -47,21 +47,27 @@ export const Controls: React.FC<ControlsProps> = ({
   const isFirst = currentStepIndex <= 0;
   const isLast = currentStepIndex >= totalSteps - 1;
 
-  // Keyboard navigation shortcuts
+  // Keyboard navigation shortcuts (Chỉ áp dụng khi không đang gõ code hoặc nhập dữ liệu)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      const target = e.target as HTMLElement | null;
+      if (
+        !target ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+        target.isContentEditable ||
+        target.closest?.('.monaco-editor') ||
+        target.closest?.('[contenteditable="true"]') ||
+        target.classList?.contains('inputarea')
+      ) {
         return;
       }
+
       if (e.key === 'ArrowRight' || e.key === 'F8') {
         e.preventDefault();
         if (!isLast) onGoToStep(currentStepIndex + 1);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         if (!isFirst) onGoToStep(currentStepIndex - 1);
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        onTogglePlay();
       } else if (e.key === 'Home') {
         onGoToStep(0);
       } else if (e.key === 'End') {
@@ -71,7 +77,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStepIndex, totalSteps, isFirst, isLast, onGoToStep, onTogglePlay]);
+  }, [currentStepIndex, totalSteps, isFirst, isLast, onGoToStep]);
 
   const progressPercent = totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 0;
 
@@ -222,7 +228,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <button
             onClick={onTogglePlay}
             disabled={totalSteps === 0}
-            title={isPlaying ? 'Tạm dừng (Phím Space)' : 'Chạy tự động liên tục (Phím Space)'}
+            title={isPlaying ? 'Tạm dừng mô phỏng' : 'Chạy tự động liên tục'}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer ${
               isPlaying
                 ? 'bg-amber-600 hover:bg-amber-500 text-white'
