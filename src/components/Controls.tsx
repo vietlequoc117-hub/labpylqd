@@ -26,6 +26,7 @@ interface ControlsProps {
   onToggleStepMode?: () => void;
   rawStepsCount?: number;
   algorithmicStepsCount?: number;
+  readyForAutoPlay?: boolean;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
@@ -41,6 +42,7 @@ export const Controls: React.FC<ControlsProps> = ({
   onToggleStepMode,
   rawStepsCount,
   algorithmicStepsCount,
+  readyForAutoPlay = false,
 }) => {
   const isFirst = currentStepIndex <= 0;
   const isLast = currentStepIndex >= totalSteps - 1;
@@ -75,6 +77,26 @@ export const Controls: React.FC<ControlsProps> = ({
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs flex flex-col gap-2.5">
+      {readyForAutoPlay && !isPlaying && totalSteps > 0 && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-medium">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 animate-pulse" />
+            <span>
+              <strong>Bước 2:</strong> Đã nhận dữ liệu bạn vừa nhập! Bây giờ hãy ấn nút{' '}
+              <strong className="text-indigo-700 underline">Chạy tự động</strong> bên dưới để xem mô phỏng thuật toán nhé.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onTogglePlay}
+            className="flex items-center gap-1 px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs cursor-pointer shrink-0 transition-all"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Chạy tự động ngay</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Row: Progress Bar & Current Status & Step Mode Toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
@@ -200,10 +222,12 @@ export const Controls: React.FC<ControlsProps> = ({
           <button
             onClick={onTogglePlay}
             disabled={totalSteps === 0}
-            title={isPlaying ? 'Tạm dừng (Phím Space)' : 'Tự động chạy liên tục (Phím Space)'}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer ${
+            title={isPlaying ? 'Tạm dừng (Phím Space)' : 'Chạy tự động liên tục (Phím Space)'}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer ${
               isPlaying
                 ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                : readyForAutoPlay
+                ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-2 ring-indigo-400 ring-offset-1 animate-pulse'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white'
             }`}
           >
@@ -215,7 +239,7 @@ export const Controls: React.FC<ControlsProps> = ({
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Tự động chạy</span>
+                <span>Chạy tự động</span>
               </>
             )}
           </button>

@@ -291,8 +291,27 @@ def run_trace(code_str, stdin_input="", max_steps=800, interactive_mode=False, i
         )
         expects_split_line = ".split" in caller_line_text or "list(" in caller_line_text
 
+        # Chuẩn hóa nếu học sinh nhập dấu phẩy hoặc nhập 1 xâu kí tự liền nhau (ví dụ: PYTHON) cho lệnh .split()
+        def _normalize_for_split(raw_str):
+            s_clean = str(raw_str).replace(",", " ").strip()
+            parts = s_clean.split()
+            if len(parts) == 1 and not parts[0].lstrip("-").isdigit() and len(parts[0]) > 1:
+                return " ".join(list(parts[0]))
+            return s_clean if "," in str(raw_str) else str(raw_str)
+
+        has_split_in_code = ".split(" in (code_str or "")
+
+        # Khi dữ liệu đầu vào có nhiều dòng (ví dụ: Dòng 1 là mảng/xâu, Dòng 2 là số k/kí tự cần tìm),
+        # ưu tiên đọc lần lượt từng dòng theo đúng thứ tự các lệnh input()
+        if len(stdin_lines) > 1 and stdin_line_idx < len(stdin_lines):
+            line = stdin_lines[stdin_line_idx]
+            stdin_line_idx += 1
+            if (expects_split_line or (has_split_in_code and not expects_single_number)):
+                return _normalize_for_split(line)
+            return line
+
         # Nếu lệnh gọi là int(input()) hoặc float(input()) (không có .split)
-        # và học sinh nhập trên 1 dòng "5 10" hoặc nhiều dòng "5\n10", đọc theo từng token số!
+        # và học sinh nhập trên 1 dòng "5 10", đọc theo từng token số!
         if expects_single_number and not expects_split_line:
             if stdin_token_idx < len(stdin_tokens):
                 tok = stdin_tokens[stdin_token_idx]
@@ -307,7 +326,7 @@ def run_trace(code_str, stdin_input="", max_steps=800, interactive_mode=False, i
             return val
 
         # Nếu có nhiều lệnh input() trong bài nhưng học sinh chỉ nhập 1 dòng có nhiều từ cách nhau bởi dấu cách
-        if total_input_calls_in_code > 1 and len(stdin_lines) == 1 and len(stdin_tokens) >= total_input_calls_in_code and not expects_split_line:
+        if total_input_calls_in_code > 1 and len(stdin_lines) == 1 and len(stdin_tokens) >= total_input_calls_in_code and not expects_split_line and stdin_line_idx == 0:
             if stdin_token_idx < len(stdin_tokens):
                 tok = stdin_tokens[stdin_token_idx]
                 stdin_token_idx += 1
@@ -317,12 +336,13 @@ def run_trace(code_str, stdin_input="", max_steps=800, interactive_mode=False, i
         if stdin_line_idx < len(stdin_lines):
             line = stdin_lines[stdin_line_idx]
             stdin_line_idx += 1
+            if (expects_split_line or (has_split_in_code and not expects_single_number)):
+                return _normalize_for_split(line)
             return line
 
         if stdin_token_idx < len(stdin_tokens):
-            tok = stdin_tokens[stdin_token_idx]
-            stdin_token_idx += 1
-            return tok
+            mid_idx = len(stdin_tokens) // 2
+            return stdin_tokens[mid_idx]
 
         return "5" if expects_single_number else "abcdefg"
     
@@ -332,12 +352,25 @@ def run_trace(code_str, stdin_input="", max_steps=800, interactive_mode=False, i
     waiting_prompt = ""
     waiting_var = ""
 
+    _builtin_int = int
+    def _smart_int(val=0, *args):
+        if args:
+            return _builtin_int(val, *args)
+        if isinstance(val, str):
+            s_val = val.strip()
+            if s_val.lstrip("-").isdigit():
+                return _builtin_int(s_val)
+            if len(s_val) > 0:
+                return s_val
+        return _builtin_int(val)
+
     try:
         sys.stdin = io.StringIO(stdin_input or "")
         compiled_code = compile(code_str, "<user_code>", "exec")
         _globals = {
             "__name__": "__main__",
-            "input": custom_input
+            "input": custom_input,
+            "int": _smart_int
         }
         sys.settrace(tracer.trace_callback)
         exec(compiled_code, _globals)

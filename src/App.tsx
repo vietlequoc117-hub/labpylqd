@@ -342,6 +342,47 @@ export default function App() {
     [interactiveInputs, rawSteps.length, code, stdinInput, handleRunCode]
   );
 
+  // Trạng thái chờ học sinh nhập dữ liệu sau khi ấn "Chạy chương trình" (ở chế độ Thuật toán Sắp xếp & Tìm kiếm)
+  const [isWaitingAlgorithmInput, setIsWaitingAlgorithmInput] = useState<boolean>(false);
+  const [readyForAutoPlay, setReadyForAutoPlay] = useState<boolean>(false);
+
+  // Dòng lệnh input() đầu tiên trong code để highlight khi đang chờ học sinh nhập dữ liệu
+  const algorithmInputLineNo = React.useMemo(() => {
+    const lines = code.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const clean = lines[i].replace(/#.*$/, '');
+      if (clean.includes('input(')) {
+        return i + 1;
+      }
+    }
+    return undefined;
+  }, [code]);
+
+  // Bước 1: Khi học sinh ấn "Chạy Chương Trình" -> nếu là Thuật toán có input(), mở chế độ tự nhập dữ liệu
+  const handleClickRunProgram = useCallback(() => {
+    if (!isThonnyMode && code.includes('input(')) {
+      setIsPlaying(false);
+      setReadyForAutoPlay(false);
+      setIsWaitingAlgorithmInput(true);
+      return;
+    }
+    setIsWaitingAlgorithmInput(false);
+    setReadyForAutoPlay(false);
+    handleRunCode(undefined, undefined, stdinInput);
+  }, [isThonnyMode, code, handleRunCode, stdinInput]);
+
+  // Bước 2: Khi học sinh tự nhập dữ liệu xong và nhấn Enter / "Nhập xong" -> nạp dữ liệu vào biểu đồ và sẵn sàng "Chạy tự động"
+  const handleConfirmAlgorithmInput = useCallback(async () => {
+    setIsWaitingAlgorithmInput(false);
+    await handleRunCode(undefined, undefined, stdinInput);
+    setReadyForAutoPlay(true);
+  }, [handleRunCode, stdinInput]);
+
+  const handleToggleAutoPlay = useCallback(() => {
+    setReadyForAutoPlay(false);
+    setIsPlaying((prev) => !prev);
+  }, []);
+
   // Switch preset
   const handleSelectPreset = (presetId: string) => {
     const found = PRESETS.find((p) => p.id === presetId);
@@ -363,6 +404,9 @@ export default function App() {
       setInteractiveInputs([]);
       setLatestShellSegments([]);
       setIsThonnyStepping(false);
+      setIsWaitingAlgorithmInput(false);
+      setReadyForAutoPlay(false);
+      setIsPlaying(false);
       setHasRun(false); // Để trống, khi nào ấn Chạy Chương Trình mới hiển thị
       if (presetId === 'complexity-comparison') {
         setActiveTab('complexity');
@@ -388,6 +432,9 @@ export default function App() {
       setInteractiveInputs([]);
       setLatestShellSegments([]);
       setIsThonnyStepping(false);
+      setIsWaitingAlgorithmInput(false);
+      setReadyForAutoPlay(false);
+      setIsPlaying(false);
       setHasRun(false);
     }
   };
@@ -452,7 +499,7 @@ export default function App() {
       <Header
         onSelectPreset={handleSelectPreset}
         selectedPresetId={selectedPresetId}
-        onRunCode={() => handleRunCode()}
+        onRunCode={handleClickRunProgram}
         isRunning={isRunning}
         engine={engine}
         onChangeEngine={setEngine}
@@ -482,10 +529,22 @@ export default function App() {
                 uncalledFunctionHint={uncalledFunctionHint}
                 onCallFunction={handleAppendFunctionCall}
                 isThonnyMode={isThonnyMode}
-                waitingInputLine={waitingInput && !isThonnyStepping ? waitingLine : undefined}
+                isSearchMode={currentPreset?.category === 'Thuật toán Tìm kiếm'}
+                presetId={selectedPresetId}
+                waitingInputLine={
+                  isThonnyMode
+                    ? waitingInput && !isThonnyStepping
+                      ? waitingLine
+                      : undefined
+                    : isWaitingAlgorithmInput
+                    ? algorithmInputLineNo
+                    : undefined
+                }
                 canStepNext={isThonnyMode && hasRun && currentStepIndex < steps.length - 1}
                 onStepNext={() => setCurrentStepIndex((c) => Math.min(steps.length - 1, c + 1))}
                 onStopThonny={isThonnyMode ? handleStopThonny : undefined}
+                isWaitingAlgorithmInput={isWaitingAlgorithmInput}
+                onConfirmAlgorithmInput={handleConfirmAlgorithmInput}
               />
             </div>
 
@@ -597,9 +656,12 @@ export default function App() {
               <Controls
                 currentStepIndex={currentStepIndex}
                 totalSteps={steps.length}
-                onGoToStep={setCurrentStepIndex}
+                onGoToStep={(idx) => {
+                  setReadyForAutoPlay(false);
+                  setCurrentStepIndex(idx);
+                }}
                 isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying(!isPlaying)}
+                onTogglePlay={handleToggleAutoPlay}
                 speed={speed}
                 onChangeSpeed={setSpeed}
                 currentStep={currentStep}
@@ -607,6 +669,7 @@ export default function App() {
                 onToggleStepMode={handleToggleStepMode}
                 rawStepsCount={rawSteps.length}
                 algorithmicStepsCount={filterResult.steps.length}
+                readyForAutoPlay={readyForAutoPlay}
               />
             </div>
 
@@ -619,14 +682,29 @@ export default function App() {
                   currentStepIndex={currentStepIndex}
                   totalSteps={steps.length}
                   allSteps={steps}
-                  onGoToStep={setCurrentStepIndex}
-                  onNextStep={() => setCurrentStepIndex((c) => Math.min(steps.length - 1, c + 1))}
-                  onPrevStep={() => setCurrentStepIndex((c) => Math.max(0, c - 1))}
+                  onGoToStep={(idx) => {
+                    setReadyForAutoPlay(false);
+                    setCurrentStepIndex(idx);
+                  }}
+                  onNextStep={() => {
+                    setReadyForAutoPlay(false);
+                    setCurrentStepIndex((c) => Math.min(steps.length - 1, c + 1));
+                  }}
+                  onPrevStep={() => {
+                    setReadyForAutoPlay(false);
+                    setCurrentStepIndex((c) => Math.max(0, c - 1));
+                  }}
                   isPlaying={isPlaying}
-                  onTogglePlay={() => setIsPlaying(!isPlaying)}
+                  onTogglePlay={handleToggleAutoPlay}
                   code={code}
                   hasRun={hasRun}
-                  onRunCode={() => handleRunCode(undefined, undefined, stdinInput)}
+                  onRunCode={handleClickRunProgram}
+                  isWaitingAlgorithmInput={isWaitingAlgorithmInput}
+                  readyForAutoPlay={readyForAutoPlay}
+                  isSearchMode={currentPreset?.category === 'Thuật toán Tìm kiếm'}
+                  stdinInput={stdinInput}
+                  onStdinChange={setStdinInput}
+                  onConfirmAlgorithmInput={handleConfirmAlgorithmInput}
                 />
               )}
 

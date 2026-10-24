@@ -22,7 +22,7 @@ import { TraceStep, StackFrame, HeapObject } from '../types';
 export type VisualItemValue = number | string;
 
 // Trích xuất danh sách giá trị (số hoặc chuỗi/kí tự) của mảng từ bất kỳ TraceStep nào
-const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
+const extractArrayFromStep = (step?: TraceStep, code?: string): VisualItemValue[] | null => {
   if (!step?.heap_objects) return null;
   const activeFrame =
     step.stack_frames?.find((f) => f.is_active) ||
@@ -90,6 +90,10 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
     }
   }
 
+  if (code && (/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code) || code.includes('.split('))) {
+    return null;
+  }
+
   // Nếu không có list trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "abcdefg", t = s[::2])
   const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
   for (const name of stringNames) {
@@ -103,7 +107,7 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
   }
 
   for (const [k, varVal] of Object.entries(vars)) {
-    if (k.startsWith('_') || k === 'raw') continue;
+    if (k.startsWith('_') || k === 'raw' || k === 'k_raw') continue;
     if (varVal && varVal.type === 'str') {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
       if (rawStr.length >= 1) {
@@ -161,6 +165,12 @@ interface ArrayBarVisualizerProps {
   code: string;
   hasRun?: boolean;
   onRunCode?: () => void;
+  isWaitingAlgorithmInput?: boolean;
+  readyForAutoPlay?: boolean;
+  isSearchMode?: boolean;
+  stdinInput?: string;
+  onStdinChange?: (val: string) => void;
+  onConfirmAlgorithmInput?: () => void;
 }
 
 export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
@@ -177,9 +187,32 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   code,
   hasRun = false,
   onRunCode,
+  isWaitingAlgorithmInput = false,
+  readyForAutoPlay = false,
+  isSearchMode = false,
+  stdinInput = '',
+  onStdinChange,
+  onConfirmAlgorithmInput,
 }) => {
   // Theme toggle: 'light' (chuẩn như ảnh người dùng gửi) hoặc 'dark' (đồng bộ app)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const { searchLine1, searchLine2 } = useMemo(() => {
+    const rawLines = (stdinInput || '').split(/\r?\n/);
+    const line1 = rawLines[0] ?? '';
+    const line2 = rawLines.length > 1 ? rawLines.slice(1).join(' ').trim() : '';
+    return { searchLine1: line1, searchLine2: line2 };
+  }, [stdinInput]);
+
+  const handleUpdateSearchLines = (newLine1: string, newLine2: string) => {
+    if (!onStdinChange) return;
+    if (newLine1.includes('\n')) {
+      const split = newLine1.split(/\r?\n/);
+      onStdinChange(`${split[0]}\n${split[1] ?? newLine2}`);
+      return;
+    }
+    onStdinChange(`${newLine1}\n${newLine2}`);
+  };
 
   // 1. Trích xuất mảng (số hoặc xâu kí tự) từ currentStep hoặc mã code
   const activeFrame =
@@ -259,24 +292,26 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       }
     }
 
-    // Fallback nếu có xâu kí tự nguyên thủy (s, t, xau, chuoi...)
-    const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
-    for (const name of stringNames) {
-      const varVal = currentVars[name];
-      if (varVal && varVal.type === 'str') {
-        const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
-        if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
-          return { name, values: rawStr.split(''), elements: [] };
+    if (!/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code) && !code.includes('.split(')) {
+      // Fallback nếu có xâu kí tự nguyên thủy (s, t, xau, chuoi...)
+      const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
+      for (const name of stringNames) {
+        const varVal = currentVars[name];
+        if (varVal && varVal.type === 'str') {
+          const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+          if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
+            return { name, values: rawStr.split(''), elements: [] };
+          }
         }
       }
-    }
 
-    for (const [varName, varVal] of Object.entries(currentVars)) {
-      if (varName.startsWith('_') || varName === 'raw') continue;
-      if (varVal && varVal.type === 'str') {
-        const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
-        if (rawStr.length >= 1) {
-          return { name: varName, values: rawStr.split(''), elements: [], customLabels: undefined, isScalarMode: false };
+      for (const [varName, varVal] of Object.entries(currentVars)) {
+        if (varName.startsWith('_') || varName === 'raw' || varName === 'k_raw') continue;
+        if (varVal && varVal.type === 'str') {
+          const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
+          if (rawStr.length >= 1) {
+            return { name: varName, values: rawStr.split(''), elements: [], customLabels: undefined, isScalarMode: false };
+          }
         }
       }
     }
@@ -327,7 +362,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
 
     const list: { name: string; strValue: string; chars: string[] }[] = [];
     for (const [k, v] of Object.entries(currentVars)) {
-      if (k.startsWith('_') || k === 'raw') continue;
+      if (k.startsWith('_') || k === 'raw' || k === 'k_raw') continue;
       if (v && v.type === 'str') {
         const raw = String(v.value).replace(/^['"]|['"]$/g, '');
         if (raw.length >= 1) {
@@ -421,10 +456,22 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     return values.some((v) => typeof v === 'string');
   }, [values]);
 
+  const isSearchAlgorithm = useMemo(() => {
+    return (
+      code.includes('linear_search') ||
+      code.includes('binary_search') ||
+      currentVars['target'] !== undefined ||
+      currentVars['can_tim'] !== undefined ||
+      currentVars['vi_tri'] !== undefined
+    );
+  }, [code, currentVars]);
+
   // 2. Trích xuất các biến con trỏ chỉ số (i, j, min_idx, key, pivot, mid, left, right...)
   const pointers = useMemo(() => {
     const map: Record<string, number> = {};
-    const pointerNames = ['i', 'j', 'k', 'min_idx', 'pivot', 'key', 'mid', 'left', 'right'];
+    const pointerNames = isSearchAlgorithm
+      ? ['i', 'j', 'min_idx', 'pivot', 'key', 'mid', 'left', 'right']
+      : ['i', 'j', 'k', 'min_idx', 'pivot', 'key', 'mid', 'left', 'right'];
     for (const p of pointerNames) {
       if (currentVars[p] !== undefined) {
         const val = parseInt(currentVars[p].value, 10);
@@ -434,21 +481,33 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       }
     }
     return map;
-  }, [currentVars, values.length]);
+  }, [currentVars, values.length, isSearchAlgorithm]);
 
-  // Trích xuất giá trị mục tiêu tìm kiếm (target / can_tim) nếu có
+  // Trích xuất giá trị mục tiêu tìm kiếm (k / target / can_tim) nếu có
   const searchTargetInfo = useMemo(() => {
-    const targetVar = currentVars['target'] || currentVars['can_tim'];
+    const globalVars = currentStep?.stack_frames?.[0]?.variables || {};
+    const targetVar =
+      currentVars['target'] ||
+      currentVars['can_tim'] ||
+      (isSearchAlgorithm ? currentVars['k'] || globalVars['k'] : undefined) ||
+      globalVars['target'] ||
+      globalVars['can_tim'];
     if (!targetVar) return null;
     let rawVal = targetVar.value;
     if (typeof rawVal === 'string') {
       rawVal = rawVal.replace(/^['"]|['"]$/g, '');
     }
+    const name =
+      currentVars['k'] || (isSearchAlgorithm && globalVars['k'])
+        ? 'k'
+        : currentVars['target'] || globalVars['target']
+        ? 'target'
+        : 'can_tim';
     return {
-      name: currentVars['target'] ? 'target' : 'can_tim',
+      name,
       value: rawVal,
     };
-  }, [currentVars]);
+  }, [currentVars, currentStep, isSearchAlgorithm]);
 
   // 3. Chuẩn hóa giá trị các cột để tính toán chiều cao tối ưu cho cả Số và Xâu kí tự
   const barItems = useMemo(() => {
@@ -509,11 +568,13 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
   const getBarColorType = (index: number): 'orange' | 'red' | 'blue' | 'green' => {
     // Nếu tìm kiếm nhị phân hoặc tuần tự tìm thấy mục tiêu:
     const item = values[index];
+    const foundIdxVal =
+      currentVars['vi_tri'] !== undefined ? parseInt(currentVars['vi_tri'].value, 10) : undefined;
     const isTargetMatch =
       searchTargetInfo &&
       (String(item) === String(searchTargetInfo.value) ||
         (typeof item === 'number' && Number(searchTargetInfo.value) === item)) &&
-      (pointers['mid'] === index || pointers['i'] === index);
+      (pointers['mid'] === index || pointers['i'] === index || foundIdxVal === index);
 
     if (isTargetMatch) {
       return 'green';
@@ -547,9 +608,9 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       }
     }
 
-    // Kiểm tra xem toàn bộ mảng đã sắp xếp hoàn tất chưa
+    // Kiểm tra xem toàn bộ mảng đã sắp xếp hoàn tất chưa (chỉ áp dụng cho thuật toán Sắp xếp)
     const isSorted = values.every((v, idx) => idx === 0 || v >= values[idx - 1]);
-    if (isSorted && currentStepIndex === totalSteps - 1) {
+    if (!isSearchAlgorithm && isSorted && currentStepIndex === totalSteps - 1) {
       return 'green';
     }
 
@@ -617,6 +678,34 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
             </div>
           )}
 
+          {/* Nút Chạy tự động trực tiếp trên Biểu Đồ Cột khi học sinh đã nhập dữ liệu xong */}
+          {hasRun && hasArrayData && totalSteps > 0 && !isWaitingAlgorithmInput && onTogglePlay && (
+            <button
+              type="button"
+              onClick={onTogglePlay}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer ${
+                isPlaying
+                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                  : readyForAutoPlay
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-2 ring-indigo-400 animate-pulse'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              }`}
+              title={isPlaying ? 'Tạm dừng mô phỏng' : 'Chạy tự động từng bước mô phỏng thuật toán'}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <span>Tạm dừng</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Chạy tự động</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Nút đổi giao diện Sáng / Tối */}
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -632,7 +721,100 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
         </div>
       </div>
 
-      {(!hasRun || !hasArrayData || totalSteps === 0) ? (
+      {isWaitingAlgorithmInput ? (
+        <div
+          className={`p-6 md:p-8 flex flex-col justify-center items-center relative min-h-[320px] ${
+            theme === 'light' ? 'bg-gradient-to-b from-amber-50/40 to-slate-100/90' : 'bg-[#0b1120]'
+          }`}
+        >
+          <div className="w-full max-w-xl bg-white dark:bg-slate-900 border-2 border-amber-400 rounded-2xl p-5 shadow-md flex flex-col gap-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 border border-amber-300 flex items-center justify-center font-bold shrink-0">
+                1
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Bước 1: Học sinh tự nhập dữ liệu đầu vào (input)
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Nhập dữ liệu bên dưới rồi nhấn <strong>Nhập xong (Enter)</strong>, sau đó ấn nút <strong>Chạy tự động</strong> để xem mô phỏng!
+                </p>
+              </div>
+            </div>
+
+            {isSearchMode ? (
+              <div className="flex flex-col gap-2.5 text-left">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+                    Dòng 1: Mảng số hoặc xâu kí tự (s = input(...)):
+                  </label>
+                  <input
+                    type="text"
+                    value={searchLine1}
+                    onChange={(e) => handleUpdateSearchLines(e.target.value, searchLine2)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onConfirmAlgorithmInput?.();
+                      }
+                    }}
+                    placeholder="Ví dụ: 12 45 7 23 56 89 hoặc P Y T H O N..."
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                    Dòng 2: Số k hoặc kí tự cần tìm (k = int(input(...))):
+                  </label>
+                  <input
+                    type="text"
+                    value={searchLine2}
+                    onChange={(e) => handleUpdateSearchLines(searchLine1, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onConfirmAlgorithmInput?.();
+                      }
+                    }}
+                    placeholder="Ví dụ: 23 hoặc T..."
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+                  Nhập mảng số hoặc xâu kí tự cách nhau bởi dấu cách (s = input(...)):
+                </label>
+                <input
+                  type="text"
+                  value={stdinInput}
+                  onChange={(e) => onStdinChange?.(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      onConfirmAlgorithmInput?.();
+                    }
+                  }}
+                  placeholder="Ví dụ: 5 2 8 1 3 hoặc P Y T H O N..."
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => onConfirmAlgorithmInput?.()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm cursor-pointer transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>✔ Nhập xong (Enter) — Chuyển sang Chạy tự động</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (!hasRun || !hasArrayData || totalSteps === 0) ? (
         <div
           className={`p-10 md:p-14 flex flex-col justify-center items-center text-center relative min-h-[320px] select-none ${
             theme === 'light' ? 'bg-gradient-to-b from-slate-50/70 to-slate-100/90' : 'bg-[#0b1120]'
@@ -644,9 +826,19 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1.5">
             Biểu Đồ Cột Đang Để Trống
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-            Phần này đang được để trống. Khi bạn bấm nút <strong>Chạy Chương Trình</strong> ở phía trên các cột mô phỏng thuật toán sẽ hiển thị và trực quan hóa từng bước!
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed mb-4">
+            Bấm nút <strong>Chạy Chương Trình</strong> để tự nhập dữ liệu đầu vào, sau đó bấm <strong>Chạy tự động</strong> để xem mô phỏng từng bước!
           </p>
+          {onRunCode && (
+            <button
+              type="button"
+              onClick={onRunCode}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs cursor-pointer transition-all"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Chạy Chương Trình &amp; Nhập Dữ Liệu</span>
+            </button>
+          )}
         </div>
       ) : (
         <>

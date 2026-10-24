@@ -5,7 +5,7 @@ export type ArraySnapshotItem = number | string;
 /**
  * Trích xuất danh sách giá trị mảng (số hoặc xâu kí tự) từ 1 TraceStep bất kỳ
  */
-export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
+export function getArraySnapshot(step?: TraceStep, code?: string): ArraySnapshotItem[] | null {
   if (!step?.heap_objects) return null;
   const activeFrame =
     step.stack_frames?.find((f) => f.is_active) ||
@@ -73,6 +73,11 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
     }
   }
 
+  // Nếu code là thuật toán có hàm def hoặc có dùng .split(), chỉ lấy mảng list trong heap, không lấy biến xâu tạm `s = input(...)`
+  if (code && (/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code) || code.includes('.split('))) {
+    return null;
+  }
+
   // Nếu không có mảng trong heap nhưng có biến xâu kí tự nguyên thủy (ví dụ s = "abcdefg", t = s[::2])
   const stringPreferredNames = [
     ...preferredNames,
@@ -105,10 +110,10 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
     }
   }
 
-  // Fallback: bất kỳ biến kiểu 'str' nào khác trong frame hiện tại (bỏ qua biến trung gian 'raw' của các bài thuật toán)
+  // Fallback: bất kỳ biến kiểu 'str' nào khác trong frame hiện tại (bỏ qua biến trung gian 'raw', 'k_raw' của các bài thuật toán)
   if (stringSnapshots.length === 0) {
     for (const [varName, varVal] of Object.entries(vars)) {
-      if (varName.startsWith('_') || varName === 'raw') continue;
+      if (varName.startsWith('_') || varName === 'raw' || varName === 'k_raw') continue;
       if (varVal && varVal.type === 'str') {
         const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
         if (rawStr.length >= 1) {
@@ -184,16 +189,38 @@ export function filterAlgorithmicSteps(rawSteps: TraceStep[], code: string): Fil
 
   // Lấy các dòng code để nhận diện dòng so sánh
   const codeLines = code.split('\n');
+  const isSearchAlgo = code.includes('linear_search') || code.includes('binary_search');
 
-  // 1. Tìm bước khởi tạo mảng đầu tiên
+  // 1. Tìm bước khởi tạo mảng đầu tiên (đối với Tìm kiếm, đợi sau khi biến k cũng đã được nhập xong)
   let initialStepFound = false;
   for (let idx = 0; idx < rawSteps.length; idx++) {
-    const arr = getArraySnapshot(rawSteps[idx]);
+    const arr = getArraySnapshot(rawSteps[idx], code);
     if (arr && arr.length > 0) {
+      if (isSearchAlgo) {
+        const frameVars =
+          rawSteps[idx].stack_frames?.find((f) => f.is_active)?.variables ||
+          rawSteps[idx].stack_frames?.[0]?.variables ||
+          {};
+        if (frameVars['k'] === undefined) {
+          continue;
+        }
+      }
       selectedRawIndices.push(idx);
       prevArrayStr = JSON.stringify(arr);
       initialStepFound = true;
       break;
+    }
+  }
+
+  if (!initialStepFound) {
+    for (let idx = 0; idx < rawSteps.length; idx++) {
+      const arr = getArraySnapshot(rawSteps[idx], code);
+      if (arr && arr.length > 0) {
+        selectedRawIndices.push(idx);
+        prevArrayStr = JSON.stringify(arr);
+        initialStepFound = true;
+        break;
+      }
     }
   }
 
@@ -232,7 +259,7 @@ export function filterAlgorithmicSteps(rawSteps: TraceStep[], code: string): Fil
       break;
     }
 
-    const currentArr = getArraySnapshot(step);
+    const currentArr = getArraySnapshot(step, code);
     const currentArrStr = currentArr ? JSON.stringify(currentArr) : null;
     const indices = getLoopIndices(step);
     const lineContent = codeLines[step.line_number - 1]?.trim() || '';

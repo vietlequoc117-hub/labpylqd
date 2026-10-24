@@ -26,15 +26,9 @@ export const PRESETS: PresetCode[] = [
             break
     return arr
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    arr = [int(x) for x in parts]
-elif len(parts) > 1:
-    arr = parts
-else:
-    arr = list(raw.strip())
+# Nhập dữ liệu từ bàn phím (các phần tử cách nhau bởi dấu cách)
+s = input("Nhập mảng số hoặc xâu kí tự: ")
+arr = [int(x) for x in s.split()]
 
 print("Dữ liệu ban đầu:", arr)
 sorted_arr = bubble_sort(arr)
@@ -72,15 +66,9 @@ print("Dữ liệu sau khi sắp xếp:", sorted_arr)
             arr[i], arr[min_idx] = arr[min_idx], arr[i]
     return arr
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    arr = [int(x) for x in parts]
-elif len(parts) > 1:
-    arr = parts
-else:
-    arr = list(raw.strip())
+# Nhập dữ liệu từ bàn phím (các phần tử cách nhau bởi dấu cách)
+s = input("Nhập mảng số hoặc xâu kí tự: ")
+arr = [int(x) for x in s.split()]
 
 print("Dữ liệu ban đầu:", arr)
 selection_sort(arr)
@@ -116,15 +104,9 @@ print("Dữ liệu sau khi sắp xếp:", arr)
         arr[j + 1] = key
     return arr
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    arr = [int(x) for x in parts]
-elif len(parts) > 1:
-    arr = parts
-else:
-    arr = list(raw.strip())
+# Nhập dữ liệu từ bàn phím (các phần tử cách nhau bởi dấu cách)
+s = input("Nhập mảng số hoặc xâu kí tự: ")
+arr = [int(x) for x in s.split()]
 
 print("Dữ liệu ban đầu:", arr)
 insertion_sort(arr)
@@ -168,15 +150,9 @@ def quick_sort(arr, low, high):
         quick_sort(arr, pi + 1, high)
     return arr
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    arr = [int(x) for x in parts]
-elif len(parts) > 1:
-    arr = parts
-else:
-    arr = list(raw.strip())
+# Nhập dữ liệu từ bàn phím (các phần tử cách nhau bởi dấu cách)
+s = input("Nhập mảng số hoặc xâu kí tự: ")
+arr = [int(x) for x in s.split()]
 
 print("Dữ liệu ban đầu:", arr)
 quick_sort(arr, 0, len(arr) - 1)
@@ -235,15 +211,9 @@ print("Dữ liệu sau Quick Sort:", arr)
             k += 1
     return arr
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    arr = [int(x) for x in parts]
-elif len(parts) > 1:
-    arr = parts
-else:
-    arr = list(raw.strip())
+# Nhập dữ liệu từ bàn phím (các phần tử cách nhau bởi dấu cách)
+s = input("Nhập mảng số hoặc xâu kí tự: ")
+arr = [int(x) for x in s.split()]
 
 print("Dữ liệu ban đầu:", arr)
 merge_sort(arr)
@@ -308,51 +278,46 @@ for item in matrix:
     id: 'linear-search',
     title: '7. Tìm kiếm tuần tự (Linear Search) - O(n)',
     category: 'Thuật toán Tìm kiếm',
-    defaultStdin: '12 45 7 23 56 89 34',
-    description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử cần tìm hoặc duyệt hết mảng. Áp dụng tối ưu cho cả mảng số và xâu/kí tự.',
-    code: `def linear_search(arr, target):
+    defaultStdin: '12 45 7 23 56 89 34\n23',
+    description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử k hoặc duyệt hết mảng. Dòng 1: Mảng số hoặc xâu kí tự; Dòng 2: Số k hoặc kí tự cần tìm.',
+    code: `def linear_search(arr, k):
     # Duyệt tuần tự từng phần tử từ đầu đến cuối mảng
     for i in range(len(arr)):
-        if arr[i] == target:
-            return i  # Tìm thấy tại chỉ số i
+        if arr[i] == k:
+            return i  # Tìm thấy k tại chỉ số i
     return -1  # Không tìm thấy sau khi duyệt hết mảng
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    data = [int(x) for x in parts]
-elif len(parts) > 1:
-    data = parts
-else:
-    data = list(raw.strip())
+# Dòng 1: Nhập 1 Mảng số hoặc xâu kí tự
+s = input("Dòng 1 - Nhập mảng số hoặc xâu kí tự: ")
+data = [int(x) for x in s.split()]
 
-# Chọn mục tiêu cần tìm kiếm (target):
-target = data[len(data) // 2] if data else ('A' if data and isinstance(data[0], str) else 0)
-print("Dữ liệu cần tìm:", data)
-print("Mục tiêu cần tìm:", target)
+# Dòng 2: Nhập số k hoặc kí tự cần tìm
+k = int(input("Dòng 2 - Nhập số k hoặc kí tự cần tìm: "))
 
-vi_tri = linear_search(data, target)
+print("Dữ liệu (Dòng 1):", data)
+print("Cần tìm k (Dòng 2):", k)
+
+vi_tri = linear_search(data, k)
 if vi_tri != -1:
-    print(f"Tìm thấy '{target}' tại vị trí index: {vi_tri}")
+    print(f"Tìm thấy '{k}' tại vị trí index: {vi_tri}")
 else:
-    print(f"Không tìm thấy '{target}' trong dữ liệu")
+    print(f"Không tìm thấy '{k}' trong dữ liệu")
 `,
     pseudocode: [
-      { lineNum: 1, text: 'Thuật toán LinearSearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Duyệt tuần tự từng phần tử trong mảng A' },
+      { lineNum: 1, text: 'Thuật toán LinearSearch(A, k):', indent: 0, correspondingPythonLines: [1], explanation: 'Duyệt tuần tự từng phần tử trong mảng A để tìm k' },
       { lineNum: 2, text: 'Lặp i từ 0 đến độ dài(A) - 1:', indent: 1, correspondingPythonLines: [3], explanation: 'Kiểm tra lần lượt từng vị trí từ trái sang phải' },
-      { lineNum: 3, text: 'Nếu A[i] = target thì:', indent: 2, correspondingPythonLines: [4], explanation: 'So sánh phần tử tại chỉ số i với giá trị cần tìm' },
+      { lineNum: 3, text: 'Nếu A[i] = k thì:', indent: 2, correspondingPythonLines: [4], explanation: 'So sánh phần tử tại chỉ số i với giá trị k cần tìm' },
       { lineNum: 4, text: 'Trả về i (Tìm thấy)', indent: 3, correspondingPythonLines: [5], explanation: 'Dừng ngay và trả về vị trí phần tử' },
-      { lineNum: 5, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [6], explanation: 'Duyệt hết mảng mà không thấy target' },
+      { lineNum: 5, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [6], explanation: 'Duyệt hết mảng mà không thấy k' },
     ],
   },
   {
     id: 'binary-search',
     title: '8. Tìm kiếm nhị phân (Binary Search) - O(log n)',
     category: 'Thuật toán Tìm kiếm',
-    defaultStdin: '2 5 8 12 16 23 38 56 72 91',
-    description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị trong thời gian O(log n). Áp dụng tối ưu cho cả số và xâu kí tự.',
-    code: `def binary_search(arr, target):
+    defaultStdin: '2 5 8 12 16 23 38 56 72 91\n23',
+    description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị k trong thời gian O(log n). Dòng 1: Mảng số hoặc xâu kí tự; Dòng 2: Số k hoặc kí tự cần tìm.',
+    code: `def binary_search(arr, k):
     left = 0
     right = len(arr) - 1
     
@@ -360,47 +325,43 @@ else:
         mid = (left + right) // 2
         mid_val = arr[mid]
         
-        if mid_val == target:
-            return mid  # Tìm thấy phần tử tại vị trí mid
-        elif mid_val < target:
+        if mid_val == k:
+            return mid  # Tìm thấy k tại vị trí mid
+        elif mid_val < k:
             left = mid + 1  # Bỏ nửa bên trái, tìm ở nửa bên phải
         else:
             right = mid - 1  # Bỏ nửa bên phải, tìm ở nửa bên trái
             
     return -1  # Không tìm thấy
 
-# Tự động nhận diện dữ liệu: Mảng số hoặc Xâu kí tự
-raw = input("Nhập mảng số hoặc xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-if all(p.lstrip('-').isdigit() for p in parts if p):
-    data = [int(x) for x in parts]
-elif len(parts) > 1:
-    data = parts
-else:
-    data = list(raw.strip())
+# Dòng 1: Nhập 1 Mảng số hoặc xâu kí tự
+s = input("Dòng 1 - Nhập mảng số hoặc xâu kí tự: ")
+data = [int(x) for x in s.split()]
+
+# Dòng 2: Nhập số k hoặc kí tự cần tìm
+k = int(input("Dòng 2 - Nhập số k hoặc kí tự cần tìm: "))
 
 # Đảm bảo dữ liệu đã được sắp xếp để áp dụng tìm kiếm nhị phân:
 data.sort()
-target = data[len(data) // 2] if data else ('A' if data and isinstance(data[0], str) else 0)
-print("Dữ liệu đã sắp xếp:", data)
-print("Mục tiêu cần tìm:", target)
+print("Dữ liệu đã sắp xếp (Dòng 1):", data)
+print("Cần tìm k (Dòng 2):", k)
 
-vi_tri = binary_search(data, target)
+vi_tri = binary_search(data, k)
 if vi_tri != -1:
-    print(f"Tìm thấy '{target}' tại vị trí index: {vi_tri}")
+    print(f"Tìm thấy '{k}' tại vị trí index: {vi_tri}")
 else:
-    print(f"Không tìm thấy '{target}' trong dữ liệu")
+    print(f"Không tìm thấy '{k}' trong dữ liệu")
 `,
     pseudocode: [
-      { lineNum: 1, text: 'Thuật toán BinarySearch(A, target):', indent: 0, correspondingPythonLines: [1], explanation: 'Tìm kiếm nhị phân trên mảng A đã có thứ tự' },
+      { lineNum: 1, text: 'Thuật toán BinarySearch(A, k):', indent: 0, correspondingPythonLines: [1], explanation: 'Tìm kiếm nhị phân giá trị k trên mảng A đã có thứ tự' },
       { lineNum: 2, text: 'left ← 0, right ← độ dài(A) - 1', indent: 1, correspondingPythonLines: [2, 3], explanation: 'Khởi tạo 2 con trỏ ở hai đầu mảng' },
       { lineNum: 3, text: 'Trong khi left ≤ right:', indent: 1, correspondingPythonLines: [5], explanation: 'Phạm vi tìm kiếm vẫn còn hợp lệ' },
       { lineNum: 4, text: 'mid ← ⌊(left + right) / 2⌋', indent: 2, correspondingPythonLines: [6, 7], explanation: 'Tìm vị trí chính giữa phạm vi tìm kiếm' },
-      { lineNum: 5, text: 'Nếu A[mid] = target thì:', indent: 2, correspondingPythonLines: [9], explanation: 'Kiểm tra phần tử ở giữa có đúng số cần tìm không' },
+      { lineNum: 5, text: 'Nếu A[mid] = k thì:', indent: 2, correspondingPythonLines: [9], explanation: 'Kiểm tra phần tử ở giữa có đúng giá trị k cần tìm không' },
       { lineNum: 6, text: 'Trả về vị trí mid (Tìm thấy)', indent: 3, correspondingPythonLines: [10], explanation: 'Dừng thuật toán ngay khi tìm thấy' },
-      { lineNum: 7, text: 'Nếu A[mid] < target thì: left ← mid + 1', indent: 2, correspondingPythonLines: [11, 12], explanation: 'target lớn hơn số ở giữa, thu hẹp sang nửa bên phải' },
-      { lineNum: 8, text: 'Ngược lại: right ← mid - 1', indent: 2, correspondingPythonLines: [13, 14], explanation: 'target nhỏ hơn số ở giữa, thu hẹp sang nửa bên trái' },
-      { lineNum: 9, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [16], explanation: 'Duyệt hết mảng mà không có target' },
+      { lineNum: 7, text: 'Nếu A[mid] < k thì: left ← mid + 1', indent: 2, correspondingPythonLines: [11, 12], explanation: 'k lớn hơn phần tử ở giữa, thu hẹp sang nửa bên phải' },
+      { lineNum: 8, text: 'Ngược lại: right ← mid - 1', indent: 2, correspondingPythonLines: [13, 14], explanation: 'k nhỏ hơn phần tử ở giữa, thu hẹp sang nửa bên trái' },
+      { lineNum: 9, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [16], explanation: 'Duyệt hết mảng mà không có k' },
     ],
   },
   {
@@ -422,10 +383,9 @@ else:
             break
     return chars
 
-# Nhập xâu kí tự (ví dụ: P Y T H O N hoặc ALGORITHM hoặc B A N A N A):
-raw = input("Nhập xâu kí tự: ")
-parts = [x.strip() for x in raw.replace(',', ' ').split() if x.strip()]
-chars = parts if len(parts) > 1 else list(raw.strip())
+# Nhập xâu kí tự từ bàn phím (ví dụ: P Y T H O N hoặc ALGORITHM):
+s = input("Nhập xâu kí tự: ")
+chars = s.split()
 
 print("Xâu kí tự ban đầu:", chars)
 print("Mã ASCII tương ứng:", [ord(c) for c in chars if len(c) == 1])

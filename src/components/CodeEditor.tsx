@@ -32,10 +32,14 @@ interface CodeEditorProps {
   uncalledFunctionHint?: string | null;
   onCallFunction?: (fnName: string) => void;
   isThonnyMode?: boolean;
+  isSearchMode?: boolean;
+  presetId?: string;
   waitingInputLine?: number;
   onStepNext?: () => void;
   canStepNext?: boolean;
   onStopThonny?: () => void;
+  isWaitingAlgorithmInput?: boolean;
+  onConfirmAlgorithmInput?: () => void;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -52,14 +56,37 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   uncalledFunctionHint,
   onCallFunction,
   isThonnyMode = false,
+  isSearchMode = false,
+  presetId = '',
   waitingInputLine,
   onStepNext,
   canStepNext = false,
   onStopThonny,
+  isWaitingAlgorithmInput = false,
+  onConfirmAlgorithmInput,
 }) => {
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
+  const sortInputRef = useRef<HTMLTextAreaElement>(null);
+  const searchLine1Ref = useRef<HTMLInputElement>(null);
+  const searchLine2Ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isWaitingAlgorithmInput && !isThonnyMode) {
+      setShowStdin(true);
+      const timer = setTimeout(() => {
+        if (isSearchMode) {
+          searchLine1Ref.current?.focus();
+          searchLine1Ref.current?.select();
+        } else {
+          sortInputRef.current?.focus();
+          sortInputRef.current?.select();
+        }
+      }, 40);
+      return () => clearTimeout(timer);
+    }
+  }, [isWaitingAlgorithmInput, isThonnyMode, isSearchMode]);
 
   // Phân tích lỗi cú pháp thời gian thực ngay khi học sinh gõ
   const lintResult: LintResult = useMemo(() => lintPythonCode(code), [code]);
@@ -69,6 +96,66 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // Mặc định luôn mở Dữ liệu đầu vào chuẩn nếu code có input() (chỉ áp dụng ở chế độ Thuật toán)
   const [showStdin, setShowStdin] = useState<boolean>(true);
+
+  // Tách riêng Dòng 1 (Mảng số hoặc xâu kí tự) và Dòng 2 (Số k hoặc kí tự cần tìm) cho chế độ Thuật toán Tìm kiếm
+  const { searchLine1, searchLine2 } = useMemo(() => {
+    const rawLines = (stdinInput || '').split(/\r?\n/);
+    const line1 = rawLines[0] ?? '';
+    const line2 = rawLines.length > 1 ? rawLines.slice(1).join(' ').trim() : '';
+    return { searchLine1: line1, searchLine2: line2 };
+  }, [stdinInput]);
+
+  const handleUpdateSearchLines = (newLine1: string, newLine2: string) => {
+    if (newLine1.includes('\n')) {
+      const split = newLine1.split(/\r?\n/);
+      onStdinChange(`${split[0]}\n${split[1] ?? newLine2}`);
+      return;
+    }
+    onStdinChange(`${newLine1}\n${newLine2}`);
+  };
+
+  const handleGenerateSearchArray = (mode: 'numbers' | 'string') => {
+    const isBinary = presetId === 'binary-search' || code.includes('binary_search');
+    if (mode === 'numbers') {
+      const count = 8;
+      const pool = new Set<number>();
+      while (pool.size < count) {
+        pool.add(Math.floor(Math.random() * 90) + 5);
+      }
+      const nums = Array.from(pool);
+      if (isBinary) {
+        nums.sort((a, b) => a - b);
+      }
+      const targetIdx = Math.floor(Math.random() * nums.length);
+      const kVal = String(nums[targetIdx]);
+      onStdinChange(`${nums.join(' ')}\n${kVal}`);
+    } else {
+      const sampleWords = ['PYTHON', 'ALGORITHM', 'TINHOC', 'BINARY', 'SEARCH', 'CODING'];
+      const chosen = sampleWords[Math.floor(Math.random() * sampleWords.length)];
+      const chars = chosen.split('');
+      if (isBinary) {
+        chars.sort();
+      }
+      const targetIdx = Math.floor(Math.random() * chars.length);
+      const kChar = chars[targetIdx];
+      onStdinChange(`${chars.join(' ')}\n${kChar}`);
+    }
+  };
+
+  const handleGenerateSortArray = (mode: 'numbers' | 'string') => {
+    if (mode === 'numbers') {
+      const count = 6;
+      const pool = new Set<number>();
+      while (pool.size < count) {
+        pool.add(Math.floor(Math.random() * 85) + 5);
+      }
+      onStdinChange(Array.from(pool).join(' '));
+    } else {
+      const sampleWords = ['PYTHON', 'TINHOC', 'SORTING', 'HOCSINH', 'BANANA', 'CODING'];
+      const chosen = sampleWords[Math.floor(Math.random() * sampleWords.length)];
+      onStdinChange(chosen.split('').join(' '));
+    }
+  };
 
   // Tự động bóc tách danh sách các câu lệnh input() trong code của học sinh
   const detectedInputs = useMemo(() => {
@@ -129,6 +216,24 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   // Phân tích dữ liệu từ chuỗi stdin (mảng số, xâu kí tự, hoặc danh sách từ) để hiển thị preview
   const parsedDataPreview = useMemo(() => {
     if (!stdinInput || !stdinInput.trim()) return null;
+
+    if (isSearchMode) {
+      const l1 = searchLine1.trim();
+      const l2 = searchLine2.trim();
+      const parts = l1.replace(/,/g, ' ').split(/\s+/).map((x) => x.trim()).filter(Boolean);
+      const isNums = parts.length > 0 && parts.every((p) => !isNaN(Number(p)));
+      const arrLabel = isNums
+        ? `[${parts.join(', ')}]`
+        : parts.length > 1
+        ? `[${parts.map((p) => `'${p}'`).join(', ')}]`
+        : `"${l1}"`;
+      return {
+        type: isNums ? ('numbers' as const) : ('chars' as const),
+        label: `Dòng 1: ${arrLabel} • Dòng 2 (cần tìm k): ${l2 || '(trống)'}`,
+        preview: `${arrLabel} | k = ${l2}`,
+      };
+    }
+
     const cleanStr = stdinInput.trim();
     const parts = cleanStr.replace(/,/g, ' ').split(/\s+/).map((x) => x.trim()).filter(Boolean);
     if (parts.length === 0) return null;
@@ -165,7 +270,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       label: `Xâu kí tự: "${cleanStr}" (${chars.length} kí tự)`,
       preview: chars.map((c) => `'${c}'`).join(', '),
     };
-  }, [stdinInput, detectedInputs, perVariableValues]);
+  }, [stdinInput, isSearchMode, searchLine1, searchLine2, detectedInputs, perVariableValues]);
 
   // Auto-open stdin panel if code calls input()
   useEffect(() => {
@@ -271,7 +376,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     const editor = editorRef.current;
     const newDecorations: any[] = [];
 
-    if (isThonnyMode && waitingInputLine && waitingInputLine > 0) {
+    if (waitingInputLine && waitingInputLine > 0) {
       newDecorations.push({
         range: {
           startLineNumber: waitingInputLine,
@@ -486,78 +591,167 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
       {/* Stdin Drawer Panel: CHỈ HIỂN THỊ ở chế độ Thuật toán Sắp xếp & Thuật toán Tìm kiếm (không hiển thị ở chế độ Thonny tự do nhập code) */}
       {!isThonnyMode && showStdin && (
-        <div className="bg-sky-50/50 border-b border-sky-100 p-3 transition-all text-xs flex flex-col gap-2.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-sky-100 text-sky-700 border border-sky-200">
-                <Terminal className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-sky-900 font-bold text-xs">
-                  Dữ liệu đầu vào cho lệnh <code className="bg-sky-100 px-1 py-0.5 rounded text-sky-800">input()</code>:
-                </span>
-                <span className="text-[11px] text-slate-500 ml-1.5">
-                  (Nhập mỗi giá trị trên 1 dòng hoặc cách nhau bởi dấu cách)
-                </span>
-              </div>
-            </div>
-
-            {parsedDataPreview && (
-              <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 shadow-xs flex items-center gap-1.5 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{parsedDataPreview.label}</span>
+        <div
+          className={`border-b p-3 transition-all text-xs flex flex-col gap-2.5 ${
+            isWaitingAlgorithmInput
+              ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-400/70 shadow-sm'
+              : 'bg-sky-50/50 border-sky-100'
+          }`}
+        >
+          {isWaitingAlgorithmInput && (
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs shadow-xs animate-pulse">
+              <span>
+                ⏳ Bước 1: Bạn vừa ấn Chạy chương trình — Hãy tự nhập dữ liệu vào ô bên dưới rồi nhấn &quot;Nhập xong (Enter)&quot;, sau đó ấn &quot;Chạy tự động&quot; nhé!
               </span>
-            )}
-          </div>
-
-          {detectedInputs.length > 0 && detectedInputs.length <= 6 && detectedInputs.every((d) => d.dataType !== 'list') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-sky-200/80 shadow-2xs">
-              {detectedInputs.map((inp, idx) => (
-                <div key={`${inp.varName}-${idx}`} className="flex items-center gap-2">
-                  <label className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 whitespace-nowrap">
-                    Dòng {inp.line}: {inp.varName} =
-                  </label>
-                  <input
-                    type="text"
-                    value={perVariableValues[idx] ?? ''}
-                    onChange={(e) => handleUpdateSingleInputVar(idx, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        onRunCode?.();
-                      }
-                    }}
-                    placeholder={inp.dataType === 'int' ? 'Nhập số nguyên (vd: 5)' : 'Nhập giá trị...'}
-                    className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1 text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-              ))}
             </div>
           )}
 
-          <div className="flex items-start gap-2">
-            <textarea
-              rows={detectedInputs.length > 1 ? Math.min(3, detectedInputs.length) : 1}
-              value={stdinInput}
-              onChange={(e) => onStdinChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || detectedInputs.length <= 1)) {
-                  e.preventDefault();
-                  onRunCode?.();
-                }
-              }}
-              placeholder="Nhập dữ liệu đầu vào (ví dụ: 5 10 hoặc mỗi dòng 1 số, hoặc mảng 5 2 8 1 3)..."
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-xs resize-y"
-            />
-            <button
-              type="button"
-              onClick={() => onRunCode?.()}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer shrink-0"
-              title="Chạy chương trình với dữ liệu đầu vào này"
-            >
-              ▶ Chạy ngay
-            </button>
-          </div>
+          {isSearchMode ? (
+            <div className="flex flex-col gap-2 bg-white p-2.5 rounded-lg border border-sky-200/80 shadow-2xs">
+              {/* Dòng 1: Tạo 1 Mảng số hoặc xâu kí tự */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1.5 rounded border border-indigo-200 whitespace-nowrap sm:w-64 shrink-0">
+                  Dòng 1: Mảng số hoặc xâu kí tự
+                </label>
+                <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
+                  <input
+                    ref={searchLine1Ref}
+                    type="text"
+                    value={searchLine1}
+                    onChange={(e) => handleUpdateSearchLines(e.target.value, searchLine2)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (searchLine2Ref.current) {
+                          searchLine2Ref.current.focus();
+                          searchLine2Ref.current.select();
+                        } else {
+                          (onConfirmAlgorithmInput || onRunCode)?.();
+                        }
+                      }
+                    }}
+                    placeholder="Nhập mảng số (vd: 12 45 7 23 56) hoặc xâu kí tự (vd: P Y T H O N)..."
+                    className="flex-1 min-w-[180px] bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateSearchArray('numbers')}
+                    className="px-2.5 py-1.5 rounded-md bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0"
+                    title="Tự động tạo 1 mảng số và chọn số k cần tìm"
+                  >
+                    🎲 Tạo mảng số
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateSearchArray('string')}
+                    className="px-2.5 py-1.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0"
+                    title="Tự động tạo 1 xâu kí tự và chọn kí tự cần tìm"
+                  >
+                    🔤 Tạo xâu kí tự
+                  </button>
+                </div>
+              </div>
+
+              {/* Dòng 2: Số k hoặc kí tự cần tìm */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200 whitespace-nowrap sm:w-64 shrink-0">
+                  Dòng 2: Số k hoặc kí tự cần tìm
+                </label>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <input
+                    ref={searchLine2Ref}
+                    type="text"
+                    value={searchLine2}
+                    onChange={(e) => handleUpdateSearchLines(searchLine1, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        (onConfirmAlgorithmInput || onRunCode)?.();
+                      }
+                    }}
+                    placeholder="Nhập số k (vd: 23) hoặc kí tự cần tìm (vd: T)..."
+                    className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => (onConfirmAlgorithmInput || onRunCode)?.()}
+                    className="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer shrink-0"
+                    title="Xác nhận dữ liệu Dòng 1 và Dòng 2 để nạp vào biểu đồ"
+                  >
+                    ✔ Nhập xong (Enter)
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 bg-white p-2.5 rounded-lg border border-sky-200/80 shadow-2xs">
+              {detectedInputs.length > 0 && detectedInputs.length <= 6 && detectedInputs.every((d) => d.dataType !== 'list') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {detectedInputs.map((inp, idx) => (
+                    <div key={`${inp.varName}-${idx}`} className="flex items-center gap-2">
+                      <label className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 whitespace-nowrap">
+                        Dòng {inp.line}: {inp.varName} =
+                      </label>
+                      <input
+                        type="text"
+                        value={perVariableValues[idx] ?? ''}
+                        onChange={(e) => handleUpdateSingleInputVar(idx, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            (onConfirmAlgorithmInput || onRunCode)?.();
+                          }
+                        }}
+                        placeholder={inp.dataType === 'int' ? 'Nhập số nguyên (vd: 5)' : 'Nhập giá trị...'}
+                        className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1 text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                <textarea
+                  ref={sortInputRef}
+                  rows={detectedInputs.length > 1 ? Math.min(3, detectedInputs.length) : 1}
+                  value={stdinInput}
+                  onChange={(e) => onStdinChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || detectedInputs.length <= 1)) {
+                      e.preventDefault();
+                      (onConfirmAlgorithmInput || onRunCode)?.();
+                    }
+                  }}
+                  placeholder="Nhập mảng số (vd: 5 2 8 1 3) hoặc xâu kí tự (vd: P Y T H O N)..."
+                  className="flex-1 min-w-[180px] bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleGenerateSortArray('numbers')}
+                  className="px-2.5 py-1.5 rounded-md bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0"
+                  title="Tự động tạo 1 mảng số ngẫu nhiên"
+                >
+                  🎲 Tạo mảng số
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateSortArray('string')}
+                  className="px-2.5 py-1.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0"
+                  title="Tự động tạo 1 xâu kí tự mẫu"
+                >
+                  🔤 Tạo xâu kí tự
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (onConfirmAlgorithmInput || onRunCode)?.()}
+                  className="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer shrink-0"
+                  title="Xác nhận dữ liệu đầu vào để sẵn sàng Chạy tự động"
+                >
+                  ✔ Nhập xong (Enter)
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

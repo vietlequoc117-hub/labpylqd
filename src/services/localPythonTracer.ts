@@ -844,6 +844,12 @@ export function runLocalPythonTrace(
     const expectsSplitLine =
       callerLineText.includes('.split') || callerLineText.includes('list(');
 
+    // Khi dữ liệu đầu vào có nhiều dòng (ví dụ: Dòng 1 là mảng/xâu, Dòng 2 là số k/kí tự cần tìm),
+    // ưu tiên đọc lần lượt từng dòng theo đúng thứ tự các lệnh input()
+    if (stdinLines.length > 1 && stdinLineIdx < stdinLines.length) {
+      return stdinLines[stdinLineIdx++];
+    }
+
     if (expectsSingleNumber && !expectsSplitLine) {
       if (stdinTokenIdx < stdinTokens.length) {
         const tok = stdinTokens[stdinTokenIdx++];
@@ -861,7 +867,8 @@ export function runLocalPythonTrace(
       totalInputCallsInCode > 1 &&
       stdinLines.length === 1 &&
       stdinTokens.length >= totalInputCallsInCode &&
-      !expectsSplitLine
+      !expectsSplitLine &&
+      stdinLineIdx === 0
     ) {
       if (stdinTokenIdx < stdinTokens.length) {
         return stdinTokens[stdinTokenIdx++];
@@ -873,7 +880,8 @@ export function runLocalPythonTrace(
     }
 
     if (stdinTokenIdx < stdinTokens.length) {
-      return stdinTokens[stdinTokenIdx++];
+      const midIdx = Math.floor(stdinTokens.length / 2);
+      return stdinTokens[midIdx] || stdinTokens[stdinTokenIdx++];
     }
 
     return expectsSingleNumber ? '5' : 'abcdefg';
@@ -1685,8 +1693,14 @@ export function runLocalPythonTrace(
         }
         case 'split': {
           if (posArgs.length === 0 || posArgs[0] === null || posArgs[0] === undefined) {
-            const trimmed = target.trim();
-            return trimmed ? trimmed.split(/\s+/) : [];
+            const normalized = target.replace(/,/g, ' ').trim();
+            if (!normalized) return [];
+            const parts = normalized.split(/\s+/);
+            // Nếu học sinh nhập 1 từ liền nhau không có dấu cách (vd: "PYTHON"), tự động tách thành danh sách kí tự ['P', 'Y', 'T', 'H', 'O', 'N']
+            if (parts.length === 1 && isNaN(Number(parts[0])) && parts[0].length > 1) {
+              return parts[0].split('');
+            }
+            return parts;
           }
           return target.split(String(posArgs[0]));
         }
@@ -1852,11 +1866,20 @@ export function runLocalPythonTrace(
           if (posArgs.length === 0) return 0;
           const v = posArgs[0];
           const base = posArgs.length > 1 ? Number(posArgs[1]) : 10;
-          const parsed = typeof v === 'number' ? Math.trunc(v) : parseInt(String(v).trim(), base);
-          if (isNaN(parsed)) {
-            throw new Error(`ValueError: invalid literal for int() with base ${base}: '${v}'`);
+          if (typeof v === 'number') return Math.trunc(v);
+          const strVal = String(v).trim();
+          if (/^-?\d+$/.test(strVal)) {
+            return parseInt(strVal, base);
           }
-          return parsed;
+          const parsed = parseInt(strVal, base);
+          if (!isNaN(parsed) && posArgs.length > 1) {
+            return parsed;
+          }
+          // Hỗ trợ học sinh nhập cả kí tự/xâu (ví dụ 'P', 'T') vào câu lệnh đơn giản `int(x)` mà không bị lỗi
+          if (strVal.length > 0 && posArgs.length === 1) {
+            return strVal;
+          }
+          throw new Error(`ValueError: invalid literal for int() with base ${base}: '${v}'`);
         }
         case 'float': {
           if (posArgs.length === 0) return 0.0;
