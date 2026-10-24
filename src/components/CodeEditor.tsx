@@ -4,11 +4,12 @@ import {
   Code2,
   AlertTriangle,
   Terminal,
-  HelpCircle,
-  Sparkles,
   Bug,
   CheckCircle2,
   Wand2,
+  Play,
+  SkipForward,
+  Square,
 } from 'lucide-react';
 import {
   lintPythonCode,
@@ -30,6 +31,11 @@ interface CodeEditorProps {
   onRunCode?: () => void;
   uncalledFunctionHint?: string | null;
   onCallFunction?: (fnName: string) => void;
+  isThonnyMode?: boolean;
+  waitingInputLine?: number;
+  onStepNext?: () => void;
+  canStepNext?: boolean;
+  onStopThonny?: () => void;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -45,6 +51,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   onRunCode,
   uncalledFunctionHint,
   onCallFunction,
+  isThonnyMode = false,
+  waitingInputLine,
+  onStepNext,
+  canStepNext = false,
+  onStopThonny,
 }) => {
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
@@ -56,8 +67,64 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const hasInputCall =
     code.includes('input(') || code.includes('sys.stdin') || code.includes('stdin.read');
 
-  // Mặc định luôn mở Dữ liệu đầu vào chuẩn nếu code có input() hoặc stdinInput có dữ liệu
+  // Mặc định luôn mở Dữ liệu đầu vào chuẩn nếu code có input() (chỉ áp dụng ở chế độ Thuật toán)
   const [showStdin, setShowStdin] = useState<boolean>(true);
+
+  // Tự động bóc tách danh sách các câu lệnh input() trong code của học sinh
+  const detectedInputs = useMemo(() => {
+    const lines = code.split('\n');
+    const items: { varName: string; line: number; dataType: 'int' | 'float' | 'list' | 'str'; promptText?: string }[] = [];
+    lines.forEach((rawLine, idx) => {
+      const clean = rawLine.replace(/#.*$/, '').trim();
+      if (!clean || !clean.includes('input(')) return;
+
+      const lhsMatch = clean.match(/^([a-zA-Z_]\w*)\s*=/);
+      const varName = lhsMatch ? lhsMatch[1] : `input_${items.length + 1}`;
+      const promptMatch = clean.match(/input\s*\(\s*["']([^"']*)["']\s*\)/);
+      const promptText = promptMatch ? promptMatch[1] : undefined;
+
+      let dataType: 'int' | 'float' | 'list' | 'str' = 'str';
+      if (clean.includes('.split(') || clean.includes('list(')) {
+        dataType = 'list';
+      } else if (/int\s*\(\s*input/.test(clean)) {
+        dataType = 'int';
+      } else if (/float\s*\(\s*input/.test(clean)) {
+        dataType = 'float';
+      }
+
+      items.push({ varName, line: idx + 1, dataType, promptText });
+    });
+    return items;
+  }, [code]);
+
+  // Tách các giá trị hiện tại trong stdinInput tương ứng với từng biến input()
+  const perVariableValues = useMemo(() => {
+    const raw = (stdinInput || '').trim();
+    const lines = raw ? raw.split(/\r?\n/) : [];
+    const tokens = raw ? raw.replace(/,/g, ' ').split(/\s+/).filter(Boolean) : [];
+    const defaults = ['5', '10', '3', '8', '2', '7'];
+
+    return detectedInputs.map((item, idx) => {
+      if (item.dataType === 'list') {
+        return lines[idx] !== undefined ? lines[idx] : raw || '5 2 8 1 3';
+      }
+      if (lines.length >= detectedInputs.length && lines[idx] !== undefined) {
+        return lines[idx].trim();
+      }
+      if (tokens[idx] !== undefined) {
+        return tokens[idx];
+      }
+      return item.dataType === 'int' || item.dataType === 'float'
+        ? defaults[idx % defaults.length]
+        : 'abcdefg';
+    });
+  }, [stdinInput, detectedInputs]);
+
+  const handleUpdateSingleInputVar = (index: number, newVal: string) => {
+    const nextVals = [...perVariableValues];
+    nextVals[index] = newVal;
+    onStdinChange(nextVals.join('\n'));
+  };
 
   // Phân tích dữ liệu từ chuỗi stdin (mảng số, xâu kí tự, hoặc danh sách từ) để hiển thị preview
   const parsedDataPreview = useMemo(() => {
@@ -66,11 +133,20 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     const parts = cleanStr.replace(/,/g, ' ').split(/\s+/).map((x) => x.trim()).filter(Boolean);
     if (parts.length === 0) return null;
 
+    if (detectedInputs.length > 1 && detectedInputs.every((d) => d.dataType !== 'list')) {
+      const pairs = detectedInputs.map((d, i) => `${d.varName} = ${perVariableValues[i] ?? ''}`);
+      return {
+        type: 'numbers' as const,
+        label: `Biến đầu vào: ${pairs.join(', ')}`,
+        preview: pairs.join(', '),
+      };
+    }
+
     const isAllNumbers = parts.every((p) => !isNaN(Number(p)));
     if (isAllNumbers) {
       return {
         type: 'numbers' as const,
-        label: `Mảng số: [${parts.join(', ')}] (${parts.length} số)`,
+        label: parts.length === 1 ? `Giá trị số: ${parts[0]}` : `Dữ liệu số: [${parts.join(', ')}] (${parts.length} số)`,
         preview: parts.join(', '),
       };
     }
@@ -83,21 +159,20 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       };
     }
 
-    // Xâu kí tự liền nhau (ví dụ: 'PYTHON', 'ALGORITHM')
     const chars = cleanStr.split('');
     return {
       type: 'chars' as const,
-      label: `Xâu kí tự: [${chars.map((c) => `'${c}'`).join(', ')}] (${chars.length} kí tự)`,
+      label: `Xâu kí tự: "${cleanStr}" (${chars.length} kí tự)`,
       preview: chars.map((c) => `'${c}'`).join(', '),
     };
-  }, [stdinInput]);
+  }, [stdinInput, detectedInputs, perVariableValues]);
 
-  // Auto-open stdin panel if code calls input() and stdin is empty
+  // Auto-open stdin panel if code calls input()
   useEffect(() => {
-    if (hasInputCall && !showStdin && !stdinInput) {
+    if (hasInputCall && !showStdin) {
       setShowStdin(true);
     }
-  }, [hasInputCall]);
+  }, [hasInputCall, showStdin]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -125,8 +200,37 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       },
     });
 
-    monaco.editor.setTheme('pyviz-light');
+    // Giao diện Thonny chuẩn (cột số thứ tự dòng màu xám #e0e0e0, nền trắng tinh khiết)
+    monaco.editor.defineTheme('thonny-classic', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: '7c3aed', fontStyle: 'bold' },
+        { token: 'identifier', foreground: '111827' },
+        { token: 'string', foreground: '047857' },
+        { token: 'number', foreground: '0369a1' },
+        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+        { token: 'delimiter', foreground: '374151' },
+      ],
+      colors: {
+        'editor.background': '#ffffff',
+        'editor.foreground': '#111827',
+        'editorCursor.foreground': '#000000',
+        'editor.lineHighlightBackground': '#f9fafb',
+        'editorLineNumber.foreground': '#666666',
+        'editorLineNumber.activeForeground': '#111111',
+        'editorGutter.background': '#e0e0e0',
+      },
+    });
+
+    monaco.editor.setTheme(isThonnyMode ? 'thonny-classic' : 'pyviz-light');
   };
+
+  // Đổi theme Monaco khi chuyển qua lại giữa chế độ Thonny (Tự do nhập code) và chế độ Thuật toán
+  useEffect(() => {
+    if (!monacoRef.current) return;
+    monacoRef.current.editor.setTheme(isThonnyMode ? 'thonny-classic' : 'pyviz-light');
+  }, [isThonnyMode]);
 
   // Cập nhật gạch chân lượn sóng báo lỗi đỏ (Monaco markers) trực tiếp trong trình soạn thảo
   useEffect(() => {
@@ -161,51 +265,67 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     monaco.editor.setModelMarkers(model, 'python-linter', markers);
   }, [code, lintResult]);
 
-  // Highlight dòng đang thực thi (Xanh/Vàng)
+  // Highlight dòng đang thực thi (Xanh/Vàng hoặc dòng đang chờ nhập input() trong Thonny)
   useEffect(() => {
     if (!editorRef.current) return;
     const editor = editorRef.current;
     const newDecorations: any[] = [];
 
-    if (justExecutedLine && justExecutedLine > 0) {
+    if (isThonnyMode && waitingInputLine && waitingInputLine > 0) {
       newDecorations.push({
         range: {
-          startLineNumber: justExecutedLine,
+          startLineNumber: waitingInputLine,
           startColumn: 1,
-          endLineNumber: justExecutedLine,
+          endLineNumber: waitingInputLine,
           endColumn: 1,
         },
         options: {
           isWholeLine: true,
-          className: 'bg-emerald-100/80 border-l-4 border-emerald-500',
-          glyphMarginClassName: 'text-emerald-600 font-bold',
+          className: 'bg-amber-100/90 border-l-4 border-indigo-600',
+          glyphMarginClassName: 'text-indigo-600 font-bold',
         },
       });
-    }
+    } else {
+      if (justExecutedLine && justExecutedLine > 0) {
+        newDecorations.push({
+          range: {
+            startLineNumber: justExecutedLine,
+            startColumn: 1,
+            endLineNumber: justExecutedLine,
+            endColumn: 1,
+          },
+          options: {
+            isWholeLine: true,
+            className: 'bg-emerald-100/80 border-l-4 border-emerald-500',
+            glyphMarginClassName: 'text-emerald-600 font-bold',
+          },
+        });
+      }
 
-    if (nextExecutingLine && nextExecutingLine > 0) {
-      newDecorations.push({
-        range: {
-          startLineNumber: nextExecutingLine,
-          startColumn: 1,
-          endLineNumber: nextExecutingLine,
-          endColumn: 1,
-        },
-        options: {
-          isWholeLine: true,
-          className: 'bg-amber-100/80 border-l-4 border-amber-500',
-          glyphMarginClassName: 'text-amber-600 font-bold',
-        },
-      });
+      if (nextExecutingLine && nextExecutingLine > 0) {
+        newDecorations.push({
+          range: {
+            startLineNumber: nextExecutingLine,
+            startColumn: 1,
+            endLineNumber: nextExecutingLine,
+            endColumn: 1,
+          },
+          options: {
+            isWholeLine: true,
+            className: 'bg-amber-100/80 border-l-4 border-amber-500',
+            glyphMarginClassName: 'text-amber-600 font-bold',
+          },
+        });
+      }
     }
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
 
-    const activeLine = nextExecutingLine || justExecutedLine;
+    const activeLine = waitingInputLine || nextExecutingLine || justExecutedLine;
     if (activeLine && activeLine > 0) {
       editor.revealLineInCenterIfOutsideViewport(activeLine);
     }
-  }, [justExecutedLine, nextExecutingLine]);
+  }, [justExecutedLine, nextExecutingLine, waitingInputLine, isThonnyMode]);
 
   // Tự động sửa lỗi
   const handleAutoFix = () => {
@@ -221,13 +341,73 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     editorRef.current.focus();
   };
 
+  const hasDiagnostics =
+    lintResult.errors.length > 0 || lintResult.warnings.length > 0 || Boolean(error);
+
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs gap-0">
+    <div
+      className={`flex flex-col h-full bg-white overflow-hidden shadow-xs gap-0 ${
+        isThonnyMode
+          ? 'border border-[#c8c8c8] rounded-none'
+          : 'border border-slate-200/90 rounded-xl'
+      }`}
+    >
       {/* Editor Header Bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-50/80 border-b border-slate-200 text-xs flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Code2 className="w-4 h-4 text-indigo-600" />
-          <span className="font-semibold text-slate-800">Trình soạn thảo Python</span>
+      <div
+        className={`flex items-center justify-between px-2.5 py-1.5 border-b text-xs flex-wrap gap-2 ${
+          isThonnyMode
+            ? 'bg-[#ececec] border-[#c8c8c8]'
+            : 'bg-slate-50/80 border-slate-200'
+        }`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          {isThonnyMode ? (
+            <>
+              {/* Thonny File Tab + Toolbar Buttons */}
+              <div className="bg-white border border-[#bcbcbc] px-2.5 py-0.5 text-[12px] font-sans text-slate-800 font-medium shadow-2xs">
+                main.py
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onRunCode?.()}
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
+                title="Chạy chương trình từng câu lệnh từ đầu"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Chạy</span>
+              </button>
+
+              {canStepNext && onStepNext && (
+                <button
+                  type="button"
+                  onClick={onStepNext}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
+                  title="Chạy câu lệnh kế tiếp"
+                >
+                  <SkipForward className="w-3 h-3" />
+                  <span>Câu lệnh tiếp</span>
+                </button>
+              )}
+
+              {onStopThonny && (
+                <button
+                  type="button"
+                  onClick={onStopThonny}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
+                  title="Dừng và đặt lại Shell"
+                >
+                  <Square className="w-2.5 h-2.5 fill-current" />
+                  <span>Dừng</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <Code2 className="w-4 h-4 text-indigo-600" />
+              <span className="font-semibold text-slate-800">Trình soạn thảo Python</span>
+            </>
+          )}
 
           {/* Linter Status Badge */}
           {lintResult.errors.length > 0 ? (
@@ -251,7 +431,45 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Quick Templates for Students */}
+          <button
+            type="button"
+            onClick={() => {
+              onChange(`n = int(input())\nm = int(input())\na = n * m\nprint(a)\n`);
+              onStdinChange('5\n10');
+              onStopThonny?.();
+            }}
+            className="px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-semibold transition-colors cursor-pointer"
+            title="Mẫu bài tập nhập 2 số nguyên n, m và tính toán"
+          >
+            Mẫu: Nhập n, m
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(`s = "abcdefg"\nfor i in range(0, len(s), 2):\n    s = s[1:] + s[0]\nt = s[::2]\nprint(t)\n`);
+              onStdinChange('abcdefg');
+              onStopThonny?.();
+            }}
+            className="px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-semibold transition-colors cursor-pointer"
+            title="Mẫu bài tập xử lý và cắt xâu kí tự"
+          >
+            Mẫu: Xâu kí tự
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onChange('');
+              onStopThonny?.();
+              if (editorRef.current) editorRef.current.focus();
+            }}
+            className="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
+            title="Xóa trắng trình soạn thảo để tự gõ code từ đầu"
+          >
+            Xóa trắng tự gõ
+          </button>
+
           {/* Quick Auto-Fix Button in Header */}
           {lintResult.canAutoFix && (
             <button
@@ -266,9 +484,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
       </div>
 
-      {/* Stdin Drawer Panel: Dữ liệu đầu vào chuẩn (Hỗ trợ Mảng số, Xâu kí tự & Từ vựng) */}
-      {showStdin && (
-        <div className="bg-sky-50/40 border-b border-sky-100 p-3 transition-all text-xs flex flex-col gap-2.5">
+      {/* Stdin Drawer Panel: CHỈ HIỂN THỊ ở chế độ Thuật toán Sắp xếp & Thuật toán Tìm kiếm (không hiển thị ở chế độ Thonny tự do nhập code) */}
+      {!isThonnyMode && showStdin && (
+        <div className="bg-sky-50/50 border-b border-sky-100 p-3 transition-all text-xs flex flex-col gap-2.5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <div className="p-1 rounded-md bg-sky-100 text-sky-700 border border-sky-200">
@@ -276,7 +494,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               </div>
               <div>
                 <span className="text-sky-900 font-bold text-xs">
-                  Dữ liệu đầu vào chuẩn (Standard Input / stdin):
+                  Dữ liệu đầu vào cho lệnh <code className="bg-sky-100 px-1 py-0.5 rounded text-sky-800">input()</code>:
+                </span>
+                <span className="text-[11px] text-slate-500 ml-1.5">
+                  (Nhập mỗi giá trị trên 1 dòng hoặc cách nhau bởi dấu cách)
                 </span>
               </div>
             </div>
@@ -289,62 +510,98 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             )}
           </div>
 
-          {/* Input text */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
+          {detectedInputs.length > 0 && detectedInputs.length <= 6 && detectedInputs.every((d) => d.dataType !== 'list') && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-sky-200/80 shadow-2xs">
+              {detectedInputs.map((inp, idx) => (
+                <div key={`${inp.varName}-${idx}`} className="flex items-center gap-2">
+                  <label className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 whitespace-nowrap">
+                    Dòng {inp.line}: {inp.varName} =
+                  </label>
+                  <input
+                    type="text"
+                    value={perVariableValues[idx] ?? ''}
+                    onChange={(e) => handleUpdateSingleInputVar(idx, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onRunCode?.();
+                      }
+                    }}
+                    placeholder={inp.dataType === 'int' ? 'Nhập số nguyên (vd: 5)' : 'Nhập giá trị...'}
+                    className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1 text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-start gap-2">
+            <textarea
+              rows={detectedInputs.length > 1 ? Math.min(3, detectedInputs.length) : 1}
               value={stdinInput}
               onChange={(e) => onStdinChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || detectedInputs.length <= 1)) {
                   e.preventDefault();
                   onRunCode?.();
                 }
               }}
-              placeholder="Nhập mảng số (5 2 8 1 3) hoặc xâu kí tự (P Y T H O N hoặc ALGORITHM)..."
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-xs"
+              placeholder="Nhập dữ liệu đầu vào (ví dụ: 5 10 hoặc mỗi dòng 1 số, hoặc mảng 5 2 8 1 3)..."
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-xs resize-y"
             />
+            <button
+              type="button"
+              onClick={() => onRunCode?.()}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer shrink-0"
+              title="Chạy chương trình với dữ liệu đầu vào này"
+            >
+              ▶ Chạy ngay
+            </button>
           </div>
         </div>
       )}
 
       {/* Monaco Editor Container */}
-      <div className="flex-1 min-h-[300px] relative bg-white">
+      <div className="flex-1 min-h-[280px] relative bg-white">
         <Editor
           height="100%"
           defaultLanguage="python"
           value={code}
           onChange={(val) => onChange(val || '')}
           onMount={handleEditorDidMount}
-          theme="pyviz-light"
+          theme={isThonnyMode ? 'thonny-classic' : 'pyviz-light'}
           options={{
-            fontFamily: "'Fira Code', 'JetBrains Mono', Menlo, monospace",
-            fontSize: 13,
-            lineHeight: 20,
+            fontFamily: "Consolas, 'Fira Code', 'JetBrains Mono', Menlo, monospace",
+            fontSize: 13.5,
+            lineHeight: 21,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             automaticLayout: true,
             tabSize: 4,
             insertSpaces: true,
             renderLineHighlight: 'all',
-            glyphMargin: true,
-            padding: { top: 12, bottom: 12 },
-            folding: true,
+            glyphMargin: !isThonnyMode,
+            lineNumbersMinChars: isThonnyMode ? 3 : 3,
+            padding: { top: 10, bottom: 10 },
+            folding: !isThonnyMode,
             smoothScrolling: true,
           }}
         />
       </div>
 
-      {/* Student Code Diagnostic & Error Guidance Panel */}
-      <div className="border-t border-slate-200 p-2 bg-slate-50/70">
-        <StudentCodeDiagnosticPanel
-          lintResult={lintResult}
-          executionError={error || null}
-          onAutoFix={handleAutoFix}
-          onSelectLine={handleSelectLine}
-        />
-      </div>
+      {/* Student Code Diagnostic & Error Guidance Panel (Trong chế độ Thonny chỉ hiện khi có lỗi/cảnh báo để giữ giao diện Thonny gọn sạch) */}
+      {(!isThonnyMode || hasDiagnostics) && (
+        <div className="border-t border-slate-200 p-2 bg-slate-50/70">
+          <StudentCodeDiagnosticPanel
+            lintResult={lintResult}
+            executionError={error || null}
+            onAutoFix={handleAutoFix}
+            onSelectLine={handleSelectLine}
+          />
+        </div>
+      )}
     </div>
   );
 };
+
 

@@ -40,7 +40,13 @@ function markQuotaExhausted(): void {
 
 // Python execution endpoint using local python3 sandbox
 app.post('/api/trace', (req, res) => {
-  const { code, stdin = '', max_steps = 800 } = req.body;
+  const {
+    code,
+    stdin = '',
+    max_steps = 800,
+    interactive_mode = false,
+    interactive_inputs = [],
+  } = req.body;
   if (typeof code !== 'string') {
     return res.status(400).json({ error: 'Missing code parameter' });
   }
@@ -108,7 +114,15 @@ app.post('/api/trace', (req, res) => {
     }
   });
 
-  pyProcess.stdin.write(JSON.stringify({ code, stdin, max_steps }));
+  pyProcess.stdin.write(
+    JSON.stringify({
+      code,
+      stdin,
+      max_steps,
+      interactive_mode,
+      interactive_inputs,
+    })
+  );
   pyProcess.stdin.end();
 });
 

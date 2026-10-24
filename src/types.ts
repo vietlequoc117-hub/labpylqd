@@ -26,6 +26,11 @@ export interface HeapObject {
   className?: string;
 }
 
+export interface ShellSegment {
+  type: 'stdout' | 'input';
+  text: string;
+}
+
 export interface TraceStep {
   step_index: number;
   line_number: number;
@@ -33,6 +38,7 @@ export interface TraceStep {
   stack_frames: StackFrame[];
   heap_objects: Record<string, HeapObject>;
   stdout: string;
+  shell_segments?: ShellSegment[];
   return_value?: VariableValue;
   exception?: string;
 }
@@ -42,6 +48,11 @@ export interface TraceResult {
   error: string | null;
   total_steps: number;
   stdout: string;
+  waiting_input?: boolean;
+  waiting_line?: number;
+  waiting_prompt?: string;
+  waiting_var?: string;
+  shell_segments?: ShellSegment[];
 }
 
 export interface ComplexityReport {

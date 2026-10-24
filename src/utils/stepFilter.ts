@@ -50,7 +50,13 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
     }
   }
 
-  for (const [_, heapObj] of Object.entries(step.heap_objects)) {
+  const ignoredTempListIds = new Set<string>();
+  if (vars['parts']?.ref_id) {
+    ignoredTempListIds.add(vars['parts'].ref_id);
+  }
+
+  for (const [heapId, heapObj] of Object.entries(step.heap_objects)) {
+    if (ignoredTempListIds.has(heapId)) continue;
     if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
       const items: ArraySnapshotItem[] = heapObj.elements
         .map((el) => {
@@ -87,7 +93,7 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
   const stringSnapshots: ArraySnapshotItem[] = [];
   for (const name of stringPreferredNames) {
     const varVal = vars[name];
-    if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+    if (varVal && varVal.type === 'str') {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
       if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
         if (stringSnapshots.length === 0) {
@@ -99,10 +105,10 @@ export function getArraySnapshot(step?: TraceStep): ArraySnapshotItem[] | null {
     }
   }
 
-  // Fallback: bất kỳ biến kiểu 'str' nào khác trong frame hiện tại
+  // Fallback: bất kỳ biến kiểu 'str' nào khác trong frame hiện tại (bỏ qua biến trung gian 'raw' của các bài thuật toán)
   if (stringSnapshots.length === 0) {
     for (const [varName, varVal] of Object.entries(vars)) {
-      if (varName.startsWith('_')) continue;
+      if (varName.startsWith('_') || varName === 'raw') continue;
       if (varVal && varVal.type === 'str') {
         const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
         if (rawStr.length >= 1) {
@@ -164,9 +170,11 @@ export interface FilterResult {
  * 5. Kết thúc thuật toán
  */
 export function filterAlgorithmicSteps(rawSteps: TraceStep[], code: string): FilterResult {
-  if (!rawSteps || rawSteps.length <= 4) {
-    const ids = rawSteps.map((_, i) => i);
-    return { steps: rawSteps, rawIndexMap: ids, filteredIndexMap: ids };
+  // Đối với các chương trình học sinh tự viết (không có hàm thuật toán def ...),
+  // giữ nguyên 100% từng câu lệnh từ đầu đến cuối để học sinh chạy tuần tự từng dòng!
+  if (!rawSteps || rawSteps.length <= 4 || !/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code)) {
+    const ids = (rawSteps || []).map((_, i) => i);
+    return { steps: rawSteps || [], rawIndexMap: ids, filteredIndexMap: ids };
   }
 
   const selectedRawIndices: number[] = [];
@@ -189,8 +197,25 @@ export function filterAlgorithmicSteps(rawSteps: TraceStep[], code: string): Fil
     }
   }
 
-  if (!initialStepFound && rawSteps.length > 0) {
-    selectedRawIndices.push(0);
+  // Nếu chương trình của học sinh là dạng bài tập cơ bản (nhập xuất n, m, tính toán số học, điều kiện...)
+  // không có mảng danh sách, giữ nguyên toàn bộ các bước thực thi từng dòng để học sinh hiểu rõ từng lệnh!
+  if (!initialStepFound) {
+    const allLineIds = rawSteps
+      .map((_, i) => i)
+      .filter((i) => {
+        const st = rawSteps[i];
+        return st.event === 'line' || st.event === 'return' || st.event === 'exception';
+      });
+    const finalIds = allLineIds.length > 0 ? allLineIds : rawSteps.map((_, i) => i);
+    const filteredSteps = finalIds.map((origIdx, newIdx) => ({
+      ...rawSteps[origIdx],
+      step_index: newIdx,
+    }));
+    const rawToFiltered: number[] = new Array(rawSteps.length).fill(0);
+    finalIds.forEach((rawIdx, fIdx) => {
+      rawToFiltered[rawIdx] = fIdx;
+    });
+    return { steps: filteredSteps, rawIndexMap: finalIds, filteredIndexMap: rawToFiltered };
   }
 
   const startSearchFrom = selectedRawIndices.length > 0 ? selectedRawIndices[0] + 1 : 0;

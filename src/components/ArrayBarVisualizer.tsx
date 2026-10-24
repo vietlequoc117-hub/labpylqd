@@ -67,7 +67,13 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
     }
   }
 
-  for (const [_, heapObj] of Object.entries(step.heap_objects)) {
+  const ignoredTempListIds = new Set<string>();
+  if (vars['parts']?.ref_id) {
+    ignoredTempListIds.add(vars['parts'].ref_id);
+  }
+
+  for (const [heapId, heapObj] of Object.entries(step.heap_objects)) {
+    if (ignoredTempListIds.has(heapId)) continue;
     if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
       const items = heapObj.elements
         .map((el) => {
@@ -88,7 +94,7 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
   const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
   for (const name of stringNames) {
     const varVal = vars[name];
-    if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+    if (varVal && varVal.type === 'str') {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
       if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
         return rawStr.split('');
@@ -97,7 +103,7 @@ const extractArrayFromStep = (step?: TraceStep): VisualItemValue[] | null => {
   }
 
   for (const [k, varVal] of Object.entries(vars)) {
-    if (k.startsWith('_')) continue;
+    if (k.startsWith('_') || k === 'raw') continue;
     if (varVal && varVal.type === 'str') {
       const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
       if (rawStr.length >= 1) {
@@ -226,8 +232,14 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
       }
     }
 
-    // Nếu không tìm thấy theo tên ưu tiên, tìm bất kỳ list nào trong heap_objects
+    // Nếu không tìm thấy theo tên ưu tiên, tìm bất kỳ list nào trong heap_objects (bỏ qua parts trung gian)
+    const ignoredTempListIds = new Set<string>();
+    if (currentVars['parts']?.ref_id) {
+      ignoredTempListIds.add(currentVars['parts'].ref_id);
+    }
+
     for (const [id, heapObj] of Object.entries(currentStep.heap_objects)) {
+      if (ignoredTempListIds.has(id)) continue;
       if (heapObj && (heapObj.type === 'list' || heapObj.type === 'tuple') && Array.isArray(heapObj.elements)) {
         const items: VisualItemValue[] = heapObj.elements
           .map((el) => {
@@ -251,7 +263,7 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     const stringNames = [...preferredNames, 't', 'xau', 'chuoi', 'st', 'res', 'result', 'ans', 'kq'];
     for (const name of stringNames) {
       const varVal = currentVars[name];
-      if (varVal && (varVal.type === 'str' || typeof varVal.value === 'string')) {
+      if (varVal && varVal.type === 'str') {
         const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
         if (rawStr.length >= 1 && !rawStr.startsWith('[') && !rawStr.startsWith('{')) {
           return { name, values: rawStr.split(''), elements: [] };
@@ -260,32 +272,71 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     }
 
     for (const [varName, varVal] of Object.entries(currentVars)) {
-      if (varName.startsWith('_')) continue;
+      if (varName.startsWith('_') || varName === 'raw') continue;
       if (varVal && varVal.type === 'str') {
         const rawStr = String(varVal.value).replace(/^['"]|['"]$/g, '');
         if (rawStr.length >= 1) {
-          return { name: varName, values: rawStr.split(''), elements: [] };
+          return { name: varName, values: rawStr.split(''), elements: [], customLabels: undefined, isScalarMode: false };
         }
       }
     }
 
-    return null;
-  }, [currentStep, currentVars]);
+    // Fallback cho bài tập cơ bản chỉ có các biến đơn (ví dụ: n = 5, m = 10, a = n * m = 50)
+    const scalarEntries: { name: string; val: VisualItemValue }[] = [];
+    const sourceVars =
+      Object.keys(currentVars).length > 0
+        ? currentVars
+        : allSteps && allSteps.length > 0
+        ? (
+            allSteps[allSteps.length - 1].stack_frames?.find((f) => f.is_active) ||
+            allSteps[allSteps.length - 1].stack_frames?.[0]
+          )?.variables || {}
+        : {};
 
-  // Danh sách tất cả các biến Xâu kí tự hiện có ở bước này (ví dụ: cả s và t = s[::2])
+    for (const [varName, varVal] of Object.entries(sourceVars)) {
+      if (varName.startsWith('_')) continue;
+      if (varVal && (varVal.type === 'int' || varVal.type === 'float' || typeof varVal.value === 'number')) {
+        const num = Number(varVal.value);
+        if (!isNaN(num)) {
+          scalarEntries.push({ name: varName, val: num });
+        }
+      }
+    }
+
+    if (scalarEntries.length > 0 || (!/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code) && allSteps && allSteps.length > 0)) {
+      return {
+        name: 'Biến số',
+        values: scalarEntries.map((e) => e.val),
+        elements: [],
+        customLabels: scalarEntries.map((e) => e.name),
+        isScalarMode: true,
+      };
+    }
+
+    return null;
+  }, [currentStep, currentVars, allSteps, code]);
+
+  // Danh sách các biến Xâu kí tự (chỉ kích hoạt cho bài tập xâu tự gõ không có mảng/hàm thuật toán)
   const allStringVars = useMemo(() => {
+    // Không hiển thị phần này đối với các bài thuật toán (có định nghĩa hàm def hoặc có danh sách mảng trong heap)
+    if (/\bdef\s+[a-zA-Z_]\w*\s*\(/.test(code)) return [];
+    const hasHeapList = Object.values(currentStep?.heap_objects || {}).some(
+      (obj) => obj && (obj.type === 'list' || obj.type === 'tuple')
+    );
+    if (hasHeapList) return [];
+
     const list: { name: string; strValue: string; chars: string[] }[] = [];
     for (const [k, v] of Object.entries(currentVars)) {
-      if (k.startsWith('_')) continue;
-      if (v && (v.type === 'str' || typeof v.value === 'string')) {
+      if (k.startsWith('_') || k === 'raw') continue;
+      if (v && v.type === 'str') {
         const raw = String(v.value).replace(/^['"]|['"]$/g, '');
-        if (v.type === 'str' || (raw.length >= 1 && isNaN(Number(raw)) && !raw.startsWith('['))) {
+        if (raw.length >= 1) {
           list.push({ name: k, strValue: raw, chars: raw.split('') });
         }
       }
     }
     return list;
-  }, [currentVars]);
+  }, [currentVars, currentStep, code]);
 
   const [selectedStrVarName, setSelectedStrVarName] = useState<string | null>(null);
 
@@ -359,6 +410,10 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
     ? activeStringOverride.chars
     : arrayData?.values || [];
   const arrayName = activeStringOverride ? activeStringOverride.name : arrayData?.name || 'arr';
+  const customBarLabels: string[] | undefined = activeStringOverride
+    ? undefined
+    : (arrayData as any)?.customLabels;
+  const isScalarMode: boolean = !activeStringOverride && Boolean((arrayData as any)?.isScalarMode);
   const hasArrayData = values.length > 0;
 
   // Kiểm tra kiểu dữ liệu: mảng số hay xâu kí tự
@@ -706,6 +761,94 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
         </div>
       )}
 
+      {/* BẢNG MÔ PHỎNG TỪNG DÒNG LỆNH & BIẾN SỐ CHO BÀI TẬP CƠ BẢN (n, m, a = n * m...) */}
+      {isScalarMode && allSteps && allSteps.length > 0 && (
+        <div
+          className={`px-4 py-3 border-b flex flex-col gap-2.5 ${
+            theme === 'light'
+              ? 'bg-emerald-50/50 border-emerald-200/80 text-slate-800'
+              : 'bg-emerald-950/20 border-emerald-900/40 text-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Giải Thích Trực Quan Từng Bước Chạy & Giá Trị Biến:</span>
+            </div>
+            {currentStep?.stdout && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-600 text-white font-mono text-xs font-bold shadow-xs">
+                <span>Kết quả in ra (Output):</span>
+                <span className="underline">{currentStep.stdout.trim()}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {code
+              .split('\n')
+              .map((lineText, idx) => ({ lineText: lineText.trim(), lineNum: idx + 1 }))
+              .filter((l) => l.lineText && !l.lineText.startsWith('#'))
+              .map((lineObj) => {
+                // Tìm bước thực thi sau khi dòng này hoàn tất (hoặc bước cuối cùng)
+                const matchingStepIdx = allSteps.findIndex(
+                  (st, sIdx) =>
+                    sIdx > 0 && allSteps[sIdx - 1]?.line_number === lineObj.lineNum
+                );
+                const targetStepIdx =
+                  matchingStepIdx !== -1 ? matchingStepIdx : allSteps.length - 1;
+                const stepSnap = allSteps[targetStepIdx];
+                const frameVars =
+                  (
+                    stepSnap?.stack_frames?.find((f) => f.is_active) ||
+                    stepSnap?.stack_frames?.[0]
+                  )?.variables || {};
+
+                const lhsMatch = lineObj.lineText.match(/^([a-zA-Z_]\w*)\s*=/);
+                const lhsVar = lhsMatch ? lhsMatch[1] : null;
+                const lhsVal = lhsVar && frameVars[lhsVar] ? frameVars[lhsVar].value : undefined;
+                const isPrintLine = lineObj.lineText.startsWith('print(');
+                const isCurrentLine = currentStep?.line_number === lineObj.lineNum;
+
+                return (
+                  <div
+                    key={lineObj.lineNum}
+                    onClick={() => onGoToStep?.(targetStepIdx)}
+                    className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs font-mono transition-all cursor-pointer ${
+                      isCurrentLine
+                        ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-1 ring-emerald-400 shadow-xs'
+                        : 'bg-white/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold shrink-0">
+                        Dòng {lineObj.lineNum}
+                      </span>
+                      <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                        {lineObj.lineText}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {lhsVar && lhsVal !== undefined ? (
+                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold">
+                          {lhsVar} = {String(lhsVal)}
+                        </span>
+                      ) : isCurrentLine && lineObj.lineText.includes('input(') ? (
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-400 font-bold animate-pulse">
+                          ⏳ Nhập trong Shell...
+                        </span>
+                      ) : isPrintLine && stepSnap?.stdout && currentStepIndex >= targetStepIdx ? (
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                          In ra: {stepSnap.stdout.trim().split('\n').pop()}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* KHU VỰC VẼ BIỂU ĐỒ CỘT (CHÍNH XÁC & TỐI ƯU CẢ CHO SỐ VÀ XÂU KÍ TỰ) */}
       <div
         className={`p-6 md:p-8 flex flex-col justify-end items-center relative overflow-x-auto min-h-[310px] select-none ${
@@ -796,10 +939,10 @@ export const ArrayBarVisualizer: React.FC<ArrayBarVisualizerProps> = ({
                   )}
                 </div>
 
-                {/* 3. Chỉ số mảng (Index) ở chân cột */}
+                {/* 3. Chỉ số mảng (Index) hoặc Tên biến (n, m, a) ở chân cột */}
                 <div className="mt-2 text-center">
-                  <span className="font-sans text-sm md:text-base font-normal text-slate-800 dark:text-slate-200">
-                    {idx}
+                  <span className="font-mono text-sm md:text-base font-bold text-slate-800 dark:text-slate-200">
+                    {customBarLabels && customBarLabels[idx] !== undefined ? customBarLabels[idx] : idx}
                   </span>
                 </div>
 
