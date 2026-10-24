@@ -271,12 +271,52 @@ for item in matrix:
     ],
   },
 
+  {
+    id: 'string-sort',
+    title: '7. Sắp xếp Xâu Kí Tự (String / ASCII Sort)',
+    category: 'Thuật toán Sắp xếp',
+    defaultStdin: 'P Y T H O N',
+    description: 'Chuyên đề sắp xếp xâu kí tự và danh sách từ vựng theo bảng mã ASCII / từ điển. Biểu diễn trực quan mã ASCII và chiều cao cột tương ứng cho học sinh THPT.',
+    code: `def sort_characters(chars):
+    n = len(chars)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n - i - 1):
+            # So sánh 2 kí tự liền kề theo thứ tự bảng mã ASCII (ord(c))
+            if chars[j] > chars[j + 1]:
+                chars[j], chars[j + 1] = chars[j + 1], chars[j]
+                swapped = True
+        if not swapped:
+            break
+    return chars
+
+# Nhập xâu kí tự từ bàn phím (ví dụ: P Y T H O N hoặc ALGORITHM):
+s = input("Nhập xâu kí tự: ")
+chars = s.split()
+
+print("Xâu kí tự ban đầu:", chars)
+print("Mã ASCII tương ứng:", [ord(c) for c in chars if len(c) == 1])
+
+sorted_chars = sort_characters(chars)
+print("Xâu sau khi sắp xếp:", sorted_chars)
+print("Ghép lại thành xâu hoàn chỉnh:", "".join(sorted_chars))
+`,
+    pseudocode: [
+      { lineNum: 1, text: 'Thuật toán StringSort(chars, n):', indent: 0, correspondingPythonLines: [1, 2], explanation: 'Định nghĩa thuật toán sắp xếp xâu kí tự nhận danh sách chars' },
+      { lineNum: 2, text: 'Lặp i từ 0 đến n - 1:', indent: 1, correspondingPythonLines: [3], explanation: 'Quét các lượt để đưa kí tự có mã ASCII lớn nhất về cuối' },
+      { lineNum: 3, text: 'Lặp j từ 0 đến n - i - 2:', indent: 2, correspondingPythonLines: [5], explanation: 'Duyệt qua các cặp kí tự kề nhau' },
+      { lineNum: 4, text: 'Nếu chars[j] > chars[j + 1] (theo mã ASCII):', indent: 3, correspondingPythonLines: [7], explanation: 'So sánh 2 chữ cái: ví dụ "Y" (ASCII 89) > "P" (ASCII 80)' },
+      { lineNum: 5, text: 'Hoán đổi chars[j] ↔ chars[j + 1]', indent: 4, correspondingPythonLines: [8], explanation: 'Đổi chỗ hai kí tự trong xâu' },
+      { lineNum: 6, text: 'Trả về xâu chars đã sắp xếp xong', indent: 1, correspondingPythonLines: [12], explanation: 'Trả về mảng kí tự theo thứ tự bảng chữ cái A-Z' },
+    ],
+  },
+
   // =========================================================================
   // THUẬT TOÁN TÌM KIẾM (CHUẨN CHƯƠNG TRÌNH TIN HỌC THPT)
   // =========================================================================
   {
     id: 'linear-search',
-    title: '7. Tìm kiếm tuần tự (Linear Search) - O(n)',
+    title: '8. Tìm kiếm tuần tự (Linear Search) - O(n)',
     category: 'Thuật toán Tìm kiếm',
     defaultStdin: '12 45 7 23 56 89 34\n23',
     description: 'Duyệt tuần tự từng phần tử từ đầu đến cuối mảng cho đến khi tìm thấy phần tử k hoặc duyệt hết mảng. Dòng 1: Mảng số hoặc xâu kí tự; Dòng 2: Số k hoặc kí tự cần tìm.',
@@ -313,7 +353,7 @@ else:
   },
   {
     id: 'binary-search',
-    title: '8. Tìm kiếm nhị phân (Binary Search) - O(log n)',
+    title: '9. Tìm kiếm nhị phân (Binary Search) - O(log n)',
     category: 'Thuật toán Tìm kiếm',
     defaultStdin: '2 5 8 12 16 23 38 56 72 91\n23',
     description: 'Chia đôi không gian tìm kiếm trên mảng đã sắp xếp bằng 2 con trỏ left và right để tìm nhanh giá trị k trong thời gian O(log n). Dòng 1: Mảng số hoặc xâu kí tự; Dòng 2: Số k hoặc kí tự cần tìm.',
@@ -362,45 +402,6 @@ else:
       { lineNum: 7, text: 'Nếu A[mid] < k thì: left ← mid + 1', indent: 2, correspondingPythonLines: [11, 12], explanation: 'k lớn hơn phần tử ở giữa, thu hẹp sang nửa bên phải' },
       { lineNum: 8, text: 'Ngược lại: right ← mid - 1', indent: 2, correspondingPythonLines: [13, 14], explanation: 'k nhỏ hơn phần tử ở giữa, thu hẹp sang nửa bên trái' },
       { lineNum: 9, text: 'Trả về -1 (Không tìm thấy)', indent: 1, correspondingPythonLines: [16], explanation: 'Duyệt hết mảng mà không có k' },
-    ],
-  },
-  {
-    id: 'string-sort',
-    title: '9. Sắp xếp Xâu Kí Tự (String / ASCII Sort)',
-    category: 'Thuật toán Sắp xếp',
-    defaultStdin: 'P Y T H O N',
-    description: 'Chuyên đề sắp xếp xâu kí tự và danh sách từ vựng theo bảng mã ASCII / từ điển. Biểu diễn trực quan mã ASCII và chiều cao cột tương ứng cho học sinh THPT.',
-    code: `def sort_characters(chars):
-    n = len(chars)
-    for i in range(n):
-        swapped = False
-        for j in range(0, n - i - 1):
-            # So sánh 2 kí tự liền kề theo thứ tự bảng mã ASCII (ord(c))
-            if chars[j] > chars[j + 1]:
-                chars[j], chars[j + 1] = chars[j + 1], chars[j]
-                swapped = True
-        if not swapped:
-            break
-    return chars
-
-# Nhập xâu kí tự từ bàn phím (ví dụ: P Y T H O N hoặc ALGORITHM):
-s = input("Nhập xâu kí tự: ")
-chars = s.split()
-
-print("Xâu kí tự ban đầu:", chars)
-print("Mã ASCII tương ứng:", [ord(c) for c in chars if len(c) == 1])
-
-sorted_chars = sort_characters(chars)
-print("Xâu sau khi sắp xếp:", sorted_chars)
-print("Ghép lại thành xâu hoàn chỉnh:", "".join(sorted_chars))
-`,
-    pseudocode: [
-      { lineNum: 1, text: 'Thuật toán StringSort(chars, n):', indent: 0, correspondingPythonLines: [1, 2], explanation: 'Định nghĩa thuật toán sắp xếp xâu kí tự nhận danh sách chars' },
-      { lineNum: 2, text: 'Lặp i từ 0 đến n - 1:', indent: 1, correspondingPythonLines: [3], explanation: 'Quét các lượt để đưa kí tự có mã ASCII lớn nhất về cuối' },
-      { lineNum: 3, text: 'Lặp j từ 0 đến n - i - 2:', indent: 2, correspondingPythonLines: [5], explanation: 'Duyệt qua các cặp kí tự kề nhau' },
-      { lineNum: 4, text: 'Nếu chars[j] > chars[j + 1] (theo mã ASCII):', indent: 3, correspondingPythonLines: [7], explanation: 'So sánh 2 chữ cái: ví dụ "Y" (ASCII 89) > "P" (ASCII 80)' },
-      { lineNum: 5, text: 'Hoán đổi chars[j] ↔ chars[j + 1]', indent: 4, correspondingPythonLines: [8], explanation: 'Đổi chỗ hai kí tự trong xâu' },
-      { lineNum: 6, text: 'Trả về xâu chars đã sắp xếp xong', indent: 1, correspondingPythonLines: [12], explanation: 'Trả về mảng kí tự theo thứ tự bảng chữ cái A-Z' },
     ],
   },
 
