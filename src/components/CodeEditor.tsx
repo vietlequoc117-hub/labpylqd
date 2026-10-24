@@ -3,13 +3,9 @@ import Editor, { OnMount } from '@monaco-editor/react';
 import {
   Code2,
   AlertTriangle,
-  Terminal,
   Bug,
   CheckCircle2,
   Wand2,
-  Play,
-  SkipForward,
-  Square,
 } from 'lucide-react';
 import {
   lintPythonCode,
@@ -450,69 +446,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     lintResult.errors.length > 0 || lintResult.warnings.length > 0 || Boolean(error);
 
   return (
-    <div
-      className={`flex flex-col h-full bg-white overflow-hidden shadow-xs gap-0 ${
-        isThonnyMode
-          ? 'border border-[#c8c8c8] rounded-none'
-          : 'border border-slate-200/90 rounded-xl'
-      }`}
-    >
+    <div className="flex flex-col h-full bg-white overflow-hidden shadow-xs gap-0 border border-slate-200/90 rounded-xl">
       {/* Editor Header Bar */}
-      <div
-        className={`flex items-center justify-between px-2.5 py-1.5 border-b text-xs flex-wrap gap-2 ${
-          isThonnyMode
-            ? 'bg-[#ececec] border-[#c8c8c8]'
-            : 'bg-slate-50/80 border-slate-200'
-        }`}
-      >
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-b text-xs flex-wrap gap-2 bg-slate-50/80 border-slate-200">
         <div className="flex items-center gap-2 flex-wrap">
-          {isThonnyMode ? (
-            <>
-              {/* Thonny File Tab + Toolbar Buttons */}
-              <div className="bg-white border border-[#bcbcbc] px-2.5 py-0.5 text-[12px] font-sans text-slate-800 font-medium shadow-2xs">
-                main.py
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onRunCode?.()}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
-                title="Chạy chương trình từng câu lệnh từ đầu"
-              >
-                <Play className="w-3 h-3 fill-current" />
-                <span>Chạy</span>
-              </button>
-
-              {canStepNext && onStepNext && (
-                <button
-                  type="button"
-                  onClick={onStepNext}
-                  className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
-                  title="Chạy câu lệnh kế tiếp"
-                >
-                  <SkipForward className="w-3 h-3" />
-                  <span>Câu lệnh tiếp</span>
-                </button>
-              )}
-
-              {onStopThonny && (
-                <button
-                  type="button"
-                  onClick={onStopThonny}
-                  className="flex items-center gap-1 px-2 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow-2xs transition-colors cursor-pointer"
-                  title="Dừng và đặt lại Shell"
-                >
-                  <Square className="w-2.5 h-2.5 fill-current" />
-                  <span>Dừng</span>
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <Code2 className="w-4 h-4 text-indigo-600" />
-              <span className="font-semibold text-slate-800">Trình soạn thảo Python</span>
-            </>
-          )}
+          <Code2 className="w-4 h-4 text-indigo-600" />
+          <span className="font-semibold text-slate-800">Trình soạn thảo Python</span>
 
           {/* Linter Status Badge */}
           {lintResult.errors.length > 0 ? (
