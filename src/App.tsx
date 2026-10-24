@@ -320,24 +320,6 @@ export default function App() {
         const instantReport =
           PRESET_COMPLEXITY_MAP[targetPresetId] || analyzeComplexityHeuristically(targetCode);
         setComplexityReport(instantReport);
-
-        // Cập nhật thêm nếu có kết nối server (tùy chọn)
-        const cacheKey = `${targetPresetId}:${targetCode.trim()}`;
-        if (!complexityCacheRef.current.has(cacheKey)) {
-          fetch('/api/gemini/complexity', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: targetCode, presetId: targetPresetId }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data && !data.error) {
-                complexityCacheRef.current.set(cacheKey, data);
-                setComplexityReport(data);
-              }
-            })
-            .catch(() => {});
-        }
       } catch (err: any) {
         setExecutionError(err.message || 'Lỗi không xác định khi thực thi code.');
         setRawSteps([]);

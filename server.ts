@@ -8,6 +8,7 @@ import fs from 'fs';
 import { PRESET_COMPLEXITY_MAP, analyzeComplexityHeuristically } from './src/complexityData.ts';
 import { getHighSchoolPedagogy } from './src/services/aiTutorKnowledge.ts';
 import { answerStudentQuestion, getLocalPedagogyResponse } from './src/services/aiTutorEngine.ts';
+import { runLocalPythonTrace } from './src/services/localPythonTracer.ts';
 
 dotenv.config();
 
@@ -95,22 +96,37 @@ app.post('/api/trace', (req, res) => {
     pyProcess.kill('SIGKILL');
   }, 7000);
 
+  let responded = false;
+  const sendFallback = () => {
+    if (responded) return;
+    responded = true;
+    const fallbackResult = runLocalPythonTrace(
+      code,
+      stdin,
+      max_steps,
+      interactive_mode,
+      interactive_inputs
+    );
+    return res.json(fallbackResult);
+  };
+
+  pyProcess.on('error', () => {
+    clearTimeout(timer);
+    sendFallback();
+  });
+
   pyProcess.on('close', (codeStatus) => {
     clearTimeout(timer);
+    if (responded) return;
     if (codeStatus !== 0 && !stdoutData) {
-      return res.status(500).json({
-        error: stderrData || 'Python execution process failed or timed out.',
-      });
+      return sendFallback();
     }
     try {
       const parsed = JSON.parse(stdoutData);
+      responded = true;
       return res.json(parsed);
-    } catch (e) {
-      return res.status(500).json({
-        error: 'Failed to parse execution trace output.',
-        raw: stdoutData,
-        stderr: stderrData,
-      });
+    } catch {
+      return sendFallback();
     }
   });
 

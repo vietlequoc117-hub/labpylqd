@@ -1,4 +1,5 @@
 import { TraceResult } from '../types';
+import { runLocalPythonTrace } from './localPythonTracer';
 
 const TRACER_PYTHON_SCRIPT = `
 import sys
@@ -372,13 +373,68 @@ def run_trace(code_str, stdin_input="", max_steps=800, interactive_mode=False, i
 let pyodideInstance: any = null;
 let pyodideLoadingPromise: Promise<any> | null = null;
 
+async function ensurePyodideScriptLoaded(): Promise<any> {
+  if (typeof window === 'undefined') return null;
+  if (typeof (window as any).loadPyodide === 'function') {
+    return (window as any).loadPyodide;
+  }
+
+  return new Promise((resolve) => {
+    const existingScript = document.querySelector('script[src*="pyodide.js"]') as HTMLScriptElement | null;
+    let settled = false;
+    const finish = (fn: any) => {
+      if (!settled) {
+        settled = true;
+        resolve(fn);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      finish((window as any).loadPyodide || null);
+    }, 6000);
+
+    if (existingScript) {
+      const checkInterval = setInterval(() => {
+        if (typeof (window as any).loadPyodide === 'function') {
+          clearInterval(checkInterval);
+          clearTimeout(timer);
+          finish((window as any).loadPyodide);
+        }
+      }, 100);
+      existingScript.addEventListener('load', () => {
+        clearInterval(checkInterval);
+        clearTimeout(timer);
+        finish((window as any).loadPyodide || null);
+      });
+      existingScript.addEventListener('error', () => {
+        clearInterval(checkInterval);
+        clearTimeout(timer);
+        finish(null);
+      });
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      script.async = true;
+      script.onload = () => {
+        clearTimeout(timer);
+        finish((window as any).loadPyodide || null);
+      };
+      script.onerror = () => {
+        clearTimeout(timer);
+        finish(null);
+      };
+      document.head.appendChild(script);
+    }
+  });
+}
+
 export async function getPyodide(): Promise<any> {
   if (pyodideInstance) return pyodideInstance;
   if (pyodideLoadingPromise) return pyodideLoadingPromise;
 
   pyodideLoadingPromise = (async () => {
     try {
-      const loadPyodideFn = (window as any).loadPyodide;
+      const loadPyodideFn = await ensurePyodideScriptLoaded();
       if (typeof loadPyodideFn === 'function') {
         const pyodide = await loadPyodideFn({
           indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/',
@@ -388,8 +444,9 @@ export async function getPyodide(): Promise<any> {
         return pyodide;
       }
     } catch (e) {
-      console.warn('Pyodide CDN load failed, fallback to backend runner:', e);
+      console.warn('Pyodide CDN load failed, using built-in local Python tracer:', e);
     }
+    pyodideLoadingPromise = null;
     return null;
   })();
 
@@ -410,49 +467,81 @@ export async function executeTrace(
   const interactiveMode = options?.interactiveMode ?? false;
   const interactiveInputs = options?.interactiveInputs ?? [];
 
-  if (engine !== 'backend') {
+  // 1. Nếu Pyodide WebAssembly đã sẵn sàng trong bộ nhớ, ưu tiên chạy ngay
+  if (engine !== 'backend' && pyodideInstance) {
     try {
-      const pyodide = await getPyodide();
-      if (pyodide) {
-        pyodide.globals.set('__user_code_input__', code);
-        pyodide.globals.set('__user_stdin_input__', stdinInput);
-        pyodide.globals.set('__interactive_mode__', interactiveMode);
-        pyodide.globals.set('__interactive_inputs_json__', JSON.stringify(interactiveInputs));
-        const jsonResultStr = await pyodide.runPythonAsync(`
+      pyodideInstance.globals.set('__user_code_input__', code);
+      pyodideInstance.globals.set('__user_stdin_input__', stdinInput);
+      pyodideInstance.globals.set('__interactive_mode__', interactiveMode);
+      pyodideInstance.globals.set('__interactive_inputs_json__', JSON.stringify(interactiveInputs));
+      const jsonResultStr = await pyodideInstance.runPythonAsync(`
 run_trace(__user_code_input__, __user_stdin_input__, 800, bool(__interactive_mode__), json.loads(__interactive_inputs_json__))
-        `);
-        const parsed = JSON.parse(jsonResultStr);
-        return parsed;
-      }
+      `);
+      return JSON.parse(jsonResultStr);
     } catch (err: any) {
-      console.warn('Pyodide execution error, falling back to server /api/trace:', err);
-      if (engine === 'pyodide') {
-        return {
-          steps: [],
-          error: err.message || 'Lỗi chạy Pyodide WebAssembly trong trình duyệt.',
-          total_steps: 0,
-          stdout: '',
-        };
-      }
+      console.warn('Pyodide execution error, falling back to local Python tracer:', err);
     }
   }
 
-  const response = await fetch('/api/trace', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      code,
-      stdin: stdinInput,
-      interactive_mode: interactiveMode,
-      interactive_inputs: interactiveInputs,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Lỗi máy chủ (${response.status})`);
+  // Khởi động tải ngầm Pyodide cho các lần chạy sau (không chặn luồng hiện tại)
+  if (engine !== 'backend' && !pyodideInstance) {
+    getPyodide().catch(() => {});
   }
 
-  const result: TraceResult = await response.json();
-  return result;
+  // 2. Chạy trực tiếp bằng bộ thông dịch Python nội bộ (Local Python Tracer) ngay trên trình duyệt (0ms, không bao giờ lỗi 404)
+  if (engine !== 'backend') {
+    const localResult = runLocalPythonTrace(
+      code,
+      stdinInput,
+      800,
+      interactiveMode,
+      interactiveInputs
+    );
+    if (!localResult.error || localResult.waiting_input) {
+      return localResult;
+    }
+
+    // Nếu có lỗi, thử kiểm tra qua backend /api/trace (nếu có) hoặc trả về kết quả localResult
+    try {
+      const response = await fetch('/api/trace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          stdin: stdinInput,
+          interactive_mode: interactiveMode,
+          interactive_inputs: interactiveInputs,
+        }),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch {
+      // Bỏ qua lỗi mạng/404 và trả về kết quả từ bộ thông dịch nội bộ
+    }
+    return localResult;
+  }
+
+  // 3. Trường hợp chọn engine === 'backend'
+  try {
+    const response = await fetch('/api/trace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        stdin: stdinInput,
+        interactive_mode: interactiveMode,
+        interactive_inputs: interactiveInputs,
+      }),
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {
+    // Fallback sang bộ thông dịch nội bộ nếu backend không phản hồi hoặc lỗi 404
+  }
+
+  return runLocalPythonTrace(code, stdinInput, 800, interactiveMode, interactiveInputs);
 }
+
