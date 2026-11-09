@@ -12,6 +12,7 @@ import {
   autoFixPythonCode,
   LintResult,
 } from '../services/pythonLinter';
+import { registerPythonCompletions } from '../services/pythonCompletions';
 import { StudentCodeDiagnosticPanel } from './StudentCodeDiagnosticPanel';
 
 interface CodeEditorProps {
@@ -279,6 +280,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
+    // Đăng ký hệ thống gợi ý từ khóa, hàm chuẩn và gõ tắt (local / keyword / snippet)
+    registerPythonCompletions(monaco);
+
     monaco.editor.defineTheme('pyviz-light', {
       base: 'vs',
       inherit: true,
@@ -298,6 +302,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         'editorLineNumber.foreground': '#94a3b8',
         'editorLineNumber.activeForeground': '#2563eb',
         'editorGutter.background': '#ffffff',
+        'editorSuggestWidget.background': '#ffffff',
+        'editorSuggestWidget.border': '#b8c4d4',
+        'editorSuggestWidget.foreground': '#0f172a',
+        'editorSuggestWidget.highlightForeground': '#2563eb',
+        'editorSuggestWidget.focusHighlightForeground': '#1d4ed8',
+        'editorSuggestWidget.selectedBackground': '#dce6f7',
+        'editorSuggestWidget.selectedForeground': '#0f172a',
       },
     });
 
@@ -321,6 +332,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         'editorLineNumber.foreground': '#666666',
         'editorLineNumber.activeForeground': '#111111',
         'editorGutter.background': '#e0e0e0',
+        'editorSuggestWidget.background': '#ffffff',
+        'editorSuggestWidget.border': '#b8c4d4',
+        'editorSuggestWidget.foreground': '#111827',
+        'editorSuggestWidget.highlightForeground': '#2563eb',
+        'editorSuggestWidget.focusHighlightForeground': '#1d4ed8',
+        'editorSuggestWidget.selectedBackground': '#dce6f7',
+        'editorSuggestWidget.selectedForeground': '#111827',
       },
     });
 
@@ -722,6 +740,30 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             padding: { top: 10, bottom: 10 },
             folding: !isThonnyMode,
             smoothScrolling: true,
+            quickSuggestions: {
+              other: true,
+              comments: false,
+              strings: false,
+            },
+            quickSuggestionsDelay: 10,
+            suggestOnTriggerCharacters: true,
+            acceptSuggestionOnEnter: 'on',
+            acceptSuggestionOnCommitCharacter: true,
+            tabCompletion: 'on',
+            wordBasedSuggestions: 'off',
+            suggest: {
+              showIcons: false,
+              showStatusBar: false,
+              preview: true,
+              filterGraceful: true,
+              snippetsPreventQuickSuggestions: false,
+              localityBonus: true,
+              showKeywords: true,
+              showSnippets: true,
+              showWords: true,
+              showFunctions: true,
+              showMethods: true,
+            },
           }}
         />
       </div>

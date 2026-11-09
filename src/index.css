@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+/* Tùy chỉnh hộp gợi ý từ khóa Python (Autocomplete Popup) giống chuẩn IDE trong hình mẫu */
+.monaco-editor .suggest-widget {
+  border-radius: 2px !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row .contents .main .left .signature-label {
+  color: #767f8d !important;
+  opacity: 1 !important;
+  font-weight: 400 !important;
+  margin-left: 4px !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
+  background-color: #dce6f7 !important;
+  outline: 1px solid #a8c0e8 !important;
+}
